@@ -689,15 +689,27 @@ try {
     "Encrypted backup downloads without plaintext, clears passphrase and imports fresh paused company/monitor copies",
   );
   const cdp = await context.newCDPSession(ui);
-  const targets = await cdp.send("Target.getTargets");
-  const workerTarget = targets.targetInfos.find(
-    (t) => t.type === "service_worker" && t.url === worker.url(),
+  const versions = new Map();
+  cdp.on("ServiceWorker.workerVersionUpdated", ({ versions: updates }) => {
+    for (const version of updates) versions.set(version.versionId, version);
+  });
+  await cdp.send("ServiceWorker.enable");
+  const target = await poll(
+    () => [...versions.values()].find((v) => v.scriptURL === worker.url()),
+    (v) => !!v,
   );
-  assert(workerTarget);
-  const restarted = context.waitForEvent("serviceworker", { timeout: 15000 });
-  await cdp.send("Target.closeTarget", { targetId: workerTarget.targetId });
+  await cdp.send("ServiceWorker.stopWorker", { versionId: target.versionId });
+  await poll(
+    () => versions.get(target.versionId)?.runningStatus,
+    (status) => status === "stopped",
+  );
   const afterWorkerRestart = await api("export");
-  worker = await restarted;
+  await poll(
+    () => versions.get(target.versionId)?.runningStatus,
+    (status) => status === "running",
+  );
+  worker = context.serviceWorkers().find((w) => w.url() === target.scriptURL);
+  assert(worker);
   assert(
     afterWorkerRestart.monitors
       .find((m) => m.id === policy.id)
