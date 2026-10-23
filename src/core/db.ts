@@ -499,7 +499,7 @@ export async function saveCompany(company: Company, documents: Monitor[] = []) {
       const metadata = {
         ...publicMetadata(item),
         companyPaused: company.paused,
-        ...(item.inheritInterval !== false
+        ...(item.inheritInterval !== false && item.interval !== company.interval
           ? { interval: company.interval, nextCheck: Date.now() }
           : {}),
       };

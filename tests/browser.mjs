@@ -615,6 +615,7 @@ try {
     await ui
       .getByRole("heading", { name: "Privacy Watch", exact: true })
       .waitFor();
+    await ui.getByText("Monitored documents (2)", { exact: true }).click();
     await ui.evaluate(() => globalThis.scrollTo(0, 0));
     await audit(ui, `Privacy Watch ${theme}`);
     await ui.screenshot({
@@ -641,7 +642,10 @@ try {
   await ui.goto(`chrome-extension://${extensionId}/dashboard.html#settings`);
   await ui.getByRole("heading", { name: "Settings", exact: true }).waitFor();
   await audit(ui, "Settings and privacy controls");
-  await ui.screenshot({ path: path.join(screenshots, "settings-amoled.png") });
+  await ui.screenshot({
+    path: path.join(screenshots, "settings-amoled.png"),
+    fullPage: true,
+  });
   await ui
     .getByLabel("Backup passphrase", { exact: true })
     .fill("A unique browser backup passphrase");

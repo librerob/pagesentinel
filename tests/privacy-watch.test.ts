@@ -91,6 +91,11 @@ describe("company grouping", () => {
         .label,
     ).toBe("Needs attention");
     expect(companyHealth({ ...c, paused: true }, [m]).label).toBe("Paused");
+    expect(
+      companyHealth(c, [
+        { ...m, lastSuccess: 1, notificationError: "Notifications blocked" },
+      ]).label,
+    ).toBe("Needs attention");
   });
   it("validates optional labels without permitting extra privileged fields", () => {
     const c = config({

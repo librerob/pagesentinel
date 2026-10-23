@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   defaults,
   health,
@@ -520,6 +520,19 @@ export function ChangeTimeline({
     [date, setDate] = useState(""),
     [status, setStatus] = useState("");
   const signature = monitors.map((m) => `${m.id}:${m.lastChange}`).join("|");
+  const analyses = useMemo(
+    () =>
+      new Map(
+        items.map((s) => [
+          s.id,
+          {
+            evidence: policyEvidence(s.before, s.after),
+            summaries: policySummary(s.before, s.after),
+          },
+        ]),
+      ),
+    [items],
+  );
   useEffect(() => {
     let live = true;
     setBusy(true);
@@ -552,22 +565,19 @@ export function ChangeTimeline({
       (unread && (!m.unread || s.time <= (m.readThrough ?? 0) || !s.alert))
     )
       return [];
-    const evidence =
-      m.kind === "policy" ? policyEvidence(s.before, s.after) : [];
+    const evidence = m.kind === "policy" ? analyses.get(s.id)!.evidence : [];
     if (category && !evidence.some((e) => e.topic === category)) return [];
     return [
       {
         s,
         m,
-        summaries: m.kind === "policy" ? policySummary(s.before, s.after) : [],
+        summaries: m.kind === "policy" ? analyses.get(s.id)!.summaries : [],
       },
     ];
   });
   const categories = [
     ...new Set(
-      items.flatMap((s) =>
-        policyEvidence(s.before, s.after).map((e) => e.topic),
-      ),
+      items.flatMap((s) => analyses.get(s.id)!.evidence.map((e) => e.topic)),
     ),
   ];
   return (
@@ -673,20 +683,7 @@ export function ChangeTimeline({
                   ? "Policy text changed. Review the highlighted passages."
                   : "Page text changed. Review the recorded differences.")}
             </p>
-            <details>
-              <summary>Show the exact change</summary>
-              <div className="diff-content">
-                {wordDiff(s.before, s.after).map((p, i) =>
-                  p.added ? (
-                    <ins key={i}>{p.value}</ins>
-                  ) : p.removed ? (
-                    <del key={i}>{p.value}</del>
-                  ) : (
-                    <span key={i}>{p.value}</span>
-                  ),
-                )}
-              </div>
-            </details>
+            <ChangeEvidence before={s.before} after={s.after} />
             {m.unread > 0 && (
               <button
                 className="text-button"
@@ -729,5 +726,30 @@ export function ChangeTimeline({
         versions to search further.
       </p>
     </>
+  );
+}
+function ChangeEvidence({ before, after }: { before: string; after: string }) {
+  const [open, setOpen] = useState(false);
+  const parts = useMemo(
+    () => (open ? wordDiff(before, after) : []),
+    [open, before, after],
+  );
+  return (
+    <details onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary>Show the exact change</summary>
+      {open && (
+        <div className="diff-content">
+          {parts.map((p, i) =>
+            p.added ? (
+              <ins key={i}>{p.value}</ins>
+            ) : p.removed ? (
+              <del key={i}>{p.value}</del>
+            ) : (
+              <span key={i}>{p.value}</span>
+            ),
+          )}
+        </div>
+      )}
+    </details>
   );
 }
