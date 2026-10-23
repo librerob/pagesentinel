@@ -148,4 +148,16 @@ describe("verifiable policy comparisons", () => {
     expect(policySummary(a, b)[0]).toContain("order changed");
     expect(paragraphChanges("A\n\nA", "A").removed).toEqual(["A"]);
   });
+  it("does not categorize an unchanged retention sentence because another sentence in its paragraph changed", () => {
+    const before =
+        "We retain data for 30 days. We do not share data with advertising partners.",
+      after =
+        "We retain data for 30 days. We may share data with advertising partners.";
+    expect(
+      policyEvidence(before, after).some((e) => e.topic === "Retention"),
+    ).toBe(false);
+    expect(
+      policyEvidence(before, after).some((e) => e.topic === "Advertising"),
+    ).toBe(true);
+  });
 });

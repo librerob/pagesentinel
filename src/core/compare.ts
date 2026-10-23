@@ -177,13 +177,26 @@ const topics: [string, RegExp][] = [
 ];
 export function policyEvidence(before: string, after: string) {
   const changes = paragraphChanges(before, after);
+  const sentences = (text: string) =>
+    text
+      .split(/(?<=[.!?])\s+|\n\n+/)
+      .map((x) => x.trim())
+      .filter(Boolean);
+  const oldSentences = new Set(sentences(before)),
+    newSentences = new Set(sentences(after));
   return [
     { value: changes.removed, removed: true },
     { value: changes.added, removed: false },
   ].flatMap((p) =>
     p.value.flatMap((text) =>
       topics
-        .filter(([, rule]) => rule.test(text))
+        .filter(([, rule]) =>
+          sentences(text).some(
+            (sentence) =>
+              !(p.removed ? newSentences : oldSentences).has(sentence) &&
+              rule.test(sentence),
+          ),
+        )
         .map(([topic]) => ({ topic, text, removed: !!p.removed })),
     ),
   );
