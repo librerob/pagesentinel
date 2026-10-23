@@ -1,5 +1,9 @@
 # Security
 
+## Public URL hardening
+
+Trailing DNS dots are canonicalized before local-domain validation and permission-pattern construction. Local suffixes, single-label names, malformed DNS labels and all IP literals (including URL-normalized alternate IPv4 spellings and IPv6) are rejected. Internationalized public names use the URL parser's ASCII representation. This fixes a confirmed local-suffix validation bypass; it does not provide DNS resolution or rebinding protection.
+
 ## Trust boundaries
 
 Fetched HTML is parsed as inert data in the service worker using bundled `htmlparser2`, `css-select`, and `domutils`. No DOM document is loaded from a monitored origin and no page scripts execute in the extension. Embedded scripts/styles/frames and hidden attributes are discarded before extraction. React renders diffs as text nodes; no fetched HTML is inserted into the extension DOM. The extension CSP restricts scripts to its own package.
