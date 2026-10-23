@@ -9,6 +9,8 @@ import {
 import { defaultSettings, type Settings } from "./core/model";
 import { importConfigs } from "./core/backup";
 import { pageSelection } from "./core/page";
+import { companyConfig, discoverHTML, discoverPolicies } from "./core/privacy";
+import { fetchHTML } from "./core/network";
 let queue = Promise.resolve<unknown>(undefined);
 function serial<T>(task: () => Promise<T>): Promise<T> {
   const result = queue.then(task);
@@ -84,6 +86,7 @@ async function reconcile(run: boolean) {
       .filter(
         (m) =>
           !m.paused &&
+          !m.companyPaused &&
           m.interval &&
           m.nextCheck <= Date.now() &&
           m.lease <= Date.now(),
@@ -118,6 +121,7 @@ async function command(message: unknown) {
     return {
       monitors: await db.monitorMetadata(),
       settings: await preferences(),
+      companies: await db.companies(),
     };
   if (msg.type === "save") {
     const c = config(msg.config);
@@ -135,10 +139,12 @@ async function command(message: unknown) {
     const existing =
       typeof msg.id === "string" ? await db.monitor(msg.id) : undefined;
     if (msg.id && !existing) throw new Error("Monitor not found.");
-    if ((await db.monitorMetadata()).length >= 500 && !existing)
-      throw new Error(
-        "This local profile has reached its safety budget of 500 monitors. Export or remove unused monitors.",
-      );
+    const company = c.companyId
+      ? (await db.companies()).find((x) => x.id === c.companyId)
+      : undefined;
+    if (c.companyId && (!company || c.kind !== "policy"))
+      throw new Error("Choose an existing company for a policy document.");
+    if (company && c.inheritInterval !== false) c.interval = company.interval;
     const reset =
       existing &&
       [
@@ -167,6 +173,7 @@ async function command(message: unknown) {
           };
     if (!m.hash && typeof msg.preview === "string")
       m.initialPreview = msg.preview;
+    m.companyPaused = company?.paused;
     await db.putMonitor(m);
     return check(m, await preferences());
   }
@@ -185,13 +192,15 @@ async function command(message: unknown) {
       monitors: await db.monitors(),
       history: await db.snapshots(),
       settings: await preferences(),
+      companies: await db.companies(),
     };
   if (msg.type === "import") {
     const items = importConfigs(msg.data);
-    if ((await db.monitorMetadata()).length + items.length > 500)
-      throw new Error(
-        "Import would exceed the local safety budget of 500 monitors.",
-      );
+    // Unknown group IDs from archival backups must never attach to live groups.
+    for (const item of items) {
+      item.companyId = undefined;
+      item.inheritInterval = undefined;
+    }
     await db.addImported(items);
     return items.length;
   }
@@ -201,11 +210,133 @@ async function command(message: unknown) {
   }
   if (msg.type === "resetAll") {
     for (const m of await db.monitorMetadata()) await db.removeMonitor(m.id);
+    for (const company of await db.companies())
+      await db.removeCompany(company.id);
     await chrome.storage.local.clear();
+    await chrome.storage.session.clear();
     const grants = await chrome.permissions.getAll();
     if (grants.origins?.length)
       await chrome.permissions.remove({ origins: grants.origins });
     return true;
+  }
+  if (msg.type === "discover") {
+    const url = webURL(msg.url).href;
+    if (!(await chrome.permissions.contains({ origins: [originPattern(url)] })))
+      throw new Error(
+        "Allow access to this website before finding policy links.",
+      );
+    return discoverHTML(url, await fetchHTML(url));
+  }
+  if (msg.type === "discoverTab") {
+    if (!Number.isInteger(msg.tabId) || Number(msg.tabId) < 0)
+      throw new Error("Open a public website first.");
+    const tab = await chrome.tabs.get(Number(msg.tabId));
+    const url = webURL(tab.url).href;
+    // A user-initiated activeTab read only. This does not follow links or fetch
+    // candidates and cannot create a monitor or grant ongoing host access.
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: Number(msg.tabId) },
+      func: () => ({
+        url: location.href,
+        links: Array.from(document.querySelectorAll("a[href]"))
+          .slice(0, 2000)
+          .map((a) => ({
+            href: a.getAttribute("href") ?? "",
+            text: (a.textContent ?? "").trim().slice(0, 300),
+            language: a.getAttribute("hreflang") ?? "",
+          })),
+      }),
+    });
+    const result = results[0]?.result;
+    if (
+      !result ||
+      webURL(result.url).href !== url ||
+      webURL((await chrome.tabs.get(Number(msg.tabId))).url).href !== url
+    )
+      throw new Error(
+        "The page changed while finding policies. Try again on the final page.",
+      );
+    await chrome.storage.session.set({
+      discovery: {
+        url,
+        title: tab.title?.slice(0, 200) ?? new URL(url).hostname,
+        links: discoverPolicies(url, result.links),
+      },
+    });
+    return true;
+  }
+  if (msg.type === "companySave") {
+    const all = await db.companies();
+    const existing =
+      typeof msg.id === "string" ? all.find((x) => x.id === msg.id) : undefined;
+    if (msg.id && !existing) throw new Error("Company not found.");
+    const company = companyConfig(msg.company, existing);
+    if (!Array.isArray(msg.documents) || msg.documents.length > 80)
+      throw new Error("Add at most 80 policy documents per action.");
+    const documents = msg.documents.map((x: unknown) => {
+      const c = config(x);
+      if (c.kind !== "policy")
+        throw new Error("Company documents must be policy monitors.");
+      c.companyId = company.id;
+      c.title = `${company.name} · ${c.title}`.slice(0, 200);
+      if (c.inheritInterval !== false) c.interval = company.interval;
+      return { ...newMonitor(c), companyPaused: company.paused };
+    });
+    const seen = new Set(
+      (await db.monitorMetadata())
+        .filter((m) => m.companyId === company.id)
+        .map((m) => m.url),
+    );
+    for (const m of documents) {
+      if (seen.has(m.url))
+        throw new Error(
+          "This company already monitors one of these document URLs. Edit its region/language label or use a distinct source URL.",
+        );
+      seen.add(m.url);
+      if (
+        !(await chrome.permissions.contains({
+          origins: [originPattern(m.url)],
+        }))
+      )
+        throw new Error(
+          "Website access was denied. No company changes were saved.",
+        );
+    }
+    company.domains = [
+      ...new Set([
+        ...company.domains,
+        ...documents.map((m) => new URL(m.url).origin),
+      ]),
+    ];
+    await db.saveCompany(company, documents);
+    return company;
+  }
+  if (msg.type === "companyDelete") {
+    if (typeof msg.id !== "string") throw new Error("Invalid company.");
+    await db.removeCompany(msg.id);
+    return true;
+  }
+  if (msg.type === "timeline") {
+    let cursor: { time: number; id: string } | undefined;
+    if (msg.cursor !== undefined && msg.cursor !== null) {
+      const c = msg.cursor as Record<string, unknown>;
+      if (
+        !c ||
+        !Number.isFinite(c.time) ||
+        typeof c.id !== "string" ||
+        c.id.length > 100
+      )
+        throw new Error("Invalid history cursor.");
+      cursor = { time: Number(c.time), id: c.id };
+    }
+    const monitors = await db.monitorMetadata();
+    return db.historyPage(
+      monitors
+        .filter((m) => !msg.companyId || m.companyId === msg.companyId)
+        .filter((m) => !msg.policyOnly || m.kind === "policy")
+        .map((m) => m.id),
+      cursor,
+    );
   }
   if (msg.type === "pick") {
     if (!Number.isInteger(msg.tabId) || Number(msg.tabId) < 0)
@@ -227,7 +358,18 @@ async function command(message: unknown) {
     return true;
   }
   if (msg.type === "read") {
-    await db.putMetadata({ ...metadata, unread: 0 });
+    await db.putMetadata({ ...metadata, unread: 0, readThrough: Date.now() });
+    return true;
+  }
+  if (msg.type === "snooze") {
+    if (![0, 60, 1440].includes(Number(msg.minutes)))
+      throw new Error("Choose one hour or one day.");
+    await db.putMetadata({
+      ...metadata,
+      snoozeUntil: Number(msg.minutes)
+        ? Date.now() + Number(msg.minutes) * 60000
+        : 0,
+    });
     return true;
   }
   if (msg.type === "pause") {
@@ -359,9 +501,10 @@ chrome.permissions.onRemoved.addListener(() => {
   );
 });
 chrome.notifications.onClicked.addListener((id) => {
+  const monitorId = id.startsWith("change:") ? id.split(":")[1] : id;
   void chrome.tabs.create({
     url: chrome.runtime.getURL(
-      `dashboard.html#monitor/${encodeURIComponent(id)}`,
+      `dashboard.html#monitor/${encodeURIComponent(monitorId)}`,
     ),
   });
 });

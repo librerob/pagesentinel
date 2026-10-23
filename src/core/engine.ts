@@ -88,7 +88,11 @@ export async function check(
   manual = false,
 ): Promise<Monitor> {
   const now = Date.now();
-  if (original.lease > now || (original.paused && !manual)) return original;
+  if (
+    original.lease > now ||
+    ((original.paused || original.companyPaused) && !manual)
+  )
+    return original;
   let m = { ...original, lastAttempt: now, lease: now + 45_000 };
   let committed = false;
   await deps.save(m);
@@ -157,10 +161,16 @@ export async function check(
       };
     await deps.commit(m, snapshot, settings.retention);
     committed = true;
-    if (changed && outcome.alert && m.notify && settings.notifications) {
+    if (
+      changed &&
+      outcome.alert &&
+      m.notify &&
+      settings.notifications &&
+      (m.snoozeUntil ?? 0) <= now
+    ) {
       try {
         await deps.notify(
-          m.id,
+          `change:${m.id}:${snapshot!.id}`,
           m.kind === "price"
             ? `${m.title}: price changed from ${original.lastPrice} to ${m.lastPrice} ${m.currency}.`
             : `${m.title}: ${m.kind === "policy" ? "Policy wording changed. Review the modified paragraphs." : "New change detected. View the recorded differences."}`,
@@ -193,7 +203,12 @@ export async function check(
       nextCheck: nextTime(original.interval, original.failures + 1),
     };
     await deps.save(m);
-    if (m.failures === 1 && m.notify && settings.notifications) {
+    if (
+      m.failures === 1 &&
+      m.notify &&
+      settings.notifications &&
+      (m.snoozeUntil ?? 0) <= now
+    ) {
       try {
         await deps.notify(
           m.id,

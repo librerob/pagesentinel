@@ -75,6 +75,8 @@ export interface Monitor extends Config {
   notificationError?: string;
   initialPreview?: string;
   companyPaused?: boolean;
+  readThrough?: number;
+  snoozeUntil?: number;
 }
 export interface Snapshot {
   id: string;

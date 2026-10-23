@@ -134,6 +134,15 @@ export function paragraphs(before: string, after: string) {
   );
 }
 const topics: [string, RegExp][] = [
+  ["Advertising", /advertis|marketing partner/i],
+  [
+    "AI training",
+    /(?:train|training).{0,40}(?:model|AI|artificial intelligence)|(?:model|AI).{0,40}train/i,
+  ],
+  ["Location", /geolocat|location data|precise location/i],
+  ["Biometrics", /biometric|facial recognition|fingerprint data/i],
+  ["Children", /children|child's|minor.s data/i],
+  ["User rights", /right to|access request|data portability/i],
   ["Data sharing", /third.part|shar(?:e|ing)|advertis|sell(?:ing)?/i],
   [
     "Retention",
@@ -150,13 +159,53 @@ const topics: [string, RegExp][] = [
   ["Subscription terms", /subscription|renew|arbitrat/i],
 ];
 export function policyEvidence(before: string, after: string) {
-  return paragraphs(before, after)
-    .filter((p) => p.added || p.removed)
-    .flatMap((p) =>
-      p.value.flatMap((text) =>
-        topics
-          .filter(([, rule]) => rule.test(text))
-          .map(([topic]) => ({ topic, text, removed: !!p.removed })),
+  const changes = paragraphChanges(before, after);
+  return [
+    { value: changes.removed, removed: true },
+    { value: changes.added, removed: false },
+  ].flatMap((p) =>
+    p.value.flatMap((text) =>
+      topics
+        .filter(([, rule]) => rule.test(text))
+        .map(([topic]) => ({ topic, text, removed: !!p.removed })),
+    ),
+  );
+}
+export function paragraphChanges(before: string, after: string) {
+  const a = before.split(/\n\n+/).filter(Boolean),
+    b = after.split(/\n\n+/).filter(Boolean);
+  const unmatched = (source: string[], other: string[]) => {
+    const counts = new Map<string, number>();
+    for (const text of other) counts.set(text, (counts.get(text) ?? 0) + 1);
+    return source.filter((text) => {
+      const count = counts.get(text) ?? 0;
+      if (count) {
+        counts.set(text, count - 1);
+        return false;
+      }
+      return true;
+    });
+  };
+  const commonA = a.filter((x) => b.includes(x)),
+    commonB = b.filter((x) => a.includes(x));
+  return {
+    added: unmatched(b, a),
+    removed: unmatched(a, b),
+    reordered:
+      commonA.length === commonB.length &&
+      commonA.some((x, i) => x !== commonB[i]),
+  };
+}
+export function policySummary(before: string, after: string): string[] {
+  const evidence = policyEvidence(before, after);
+  const changes = paragraphChanges(before, after);
+  if (!changes.added.length && !changes.removed.length && changes.reordered)
+    return ["Paragraph order changed. The paragraph wording is unchanged."];
+  return [
+    ...new Set(
+      evidence.map(
+        (e) => `${e.topic} wording changed. Review the exact passages.`,
       ),
-    );
+    ),
+  ].slice(0, 8);
 }

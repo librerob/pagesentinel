@@ -110,6 +110,17 @@ export function extract(html: string, c: Config): string {
   let nodes;
   try {
     nodes = c.selector ? selectAll(c.selector, doc) : selectAll("body", doc);
+    // Prefer one explicit document landmark for policy pages, with a full-page
+    // fallback. Never silently discard sections inside the chosen document.
+    if (!c.selector && c.kind === "policy") {
+      for (const selector of ["main", "article", '[role="main"]']) {
+        const candidates = selectAll(selector, doc);
+        if (candidates.length === 1) {
+          nodes = candidates;
+          break;
+        }
+      }
+    }
   } catch {
     throw new Error(
       "The selected CSS selector is invalid. Select the element again.",

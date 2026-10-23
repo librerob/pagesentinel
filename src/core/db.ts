@@ -265,6 +265,39 @@ export async function snapshots(id?: string): Promise<Snapshot[]> {
     )
   ).sort((a, b) => b.time - a.time);
 }
+export async function historyPage(
+  ids: string[],
+  cursor?: { time: number; id: string },
+) {
+  const db = await database(),
+    tx = db.transaction(["snapshotMetadata", "snapshots"]);
+  const allowed = new Set(ids);
+  const metadata = (
+    await request<SnapshotMetadata[]>(
+      tx.objectStore("snapshotMetadata").getAll(),
+    )
+  )
+    .filter(
+      (s) =>
+        allowed.has(s.monitorId) &&
+        (!cursor ||
+          s.time < cursor.time ||
+          (s.time === cursor.time && s.id < cursor.id)),
+    )
+    .sort((a, b) => b.time - a.time || b.id.localeCompare(a.id));
+  const page = metadata.slice(0, 20);
+  const items = await Promise.all(
+    page.map((s) => request<Snapshot>(tx.objectStore("snapshots").get(s.id))),
+  );
+  const last = page.at(-1);
+  return {
+    items,
+    next:
+      metadata.length > page.length && last
+        ? { time: last.time, id: last.id }
+        : null,
+  };
+}
 async function setMonitor(
   tx: IDBTransaction,
   usage: Usage,

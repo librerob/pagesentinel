@@ -10,11 +10,10 @@ export function importConfigs(value: unknown): Monitor[] {
     !("version" in value) ||
     value.version !== 1 ||
     !("monitors" in value) ||
-    !Array.isArray(value.monitors) ||
-    value.monitors.length > 500
+    !Array.isArray(value.monitors)
   )
     throw new Error(
-      "Unsupported or malformed backup. Import at most 500 monitor configurations at once.",
+      "Unsupported or malformed backup. Use a PageSentinel JSON export.",
     );
   // Copy only validated fields. Imported history is archival, never a trusted baseline.
   return value.monitors.map((item) => ({
