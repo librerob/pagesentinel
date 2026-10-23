@@ -32,7 +32,10 @@ async function badge() {
       m.error ||
       m.notificationError ||
       m.permissionRequired ||
-      (!m.paused && m.interval && m.nextCheck < Date.now() - 180_000),
+      (!m.paused &&
+        !m.companyPaused &&
+        m.interval &&
+        m.nextCheck < Date.now() - 180_000),
   );
   const unread = all.reduce((n, m) => n + m.unread, 0);
   await chrome.action.setBadgeText({
@@ -74,7 +77,13 @@ async function reconcile(run: boolean) {
       };
       await db.putMetadata(m);
     }
-    if (!m.paused && m.interval && m.nextCheck < Date.now() - 180_000 && !run) {
+    if (
+      !m.paused &&
+      !m.companyPaused &&
+      m.interval &&
+      m.nextCheck < Date.now() - 180_000 &&
+      !run
+    ) {
       await db.putMetadata({
         ...m,
         nextCheck: Date.now() + 15_000 + index++ * 15_000,

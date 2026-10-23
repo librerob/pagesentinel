@@ -1,5 +1,7 @@
 # Security
 
+See the [implementation security review](docs/SECURITY_REVIEW.md) for the threat model, confirmed fix, regression evidence and residual risks. This is a preview engineering review, not independent certification. Company/discovery and encrypted-backup boundaries are described in [Privacy Watch](docs/PRIVACY_WATCH.md) and [backup details](docs/BACKUPS_AND_MONITORING.md).
+
 ## Public URL hardening
 
 Trailing DNS dots are canonicalized before local-domain validation and permission-pattern construction. Local suffixes, single-label names, malformed DNS labels and all IP literals (including URL-normalized alternate IPv4 spellings and IPv6) are rejected. Internationalized public names use the URL parser's ASCII representation. This fixes a confirmed local-suffix validation bypass; it does not provide DNS resolution or rebinding protection.

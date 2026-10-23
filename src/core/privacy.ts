@@ -141,6 +141,7 @@ export function companyHealth(
     paused: boolean;
     error: string;
     permissionRequired: boolean;
+    notificationError?: string;
     lastSuccess: number;
     unread: number;
     interval: number;
@@ -152,6 +153,7 @@ export function companyHealth(
   const attention = documents.filter(
     (m) =>
       m.error ||
+      m.notificationError ||
       m.permissionRequired ||
       (!company.paused &&
         !m.paused &&

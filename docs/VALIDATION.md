@@ -1,5 +1,13 @@
 # Validation
 
+## v0.2.0 preview workflow
+
+Run every README quality command against the reviewed branch. The expanded suite covers company storage from v1/v2, policy discovery/grouping, paragraph evidence, encrypted backups/tampering, stable-link lists, cumulative reversions, snoozing, atomic bulk operations and quota behavior. Chromium uses the actual extension and fixtures; axe scans cover onboarding, forms, popup, dashboards, comparisons, companies, settings and responsive layout. Keyboard assertions cover dialog containment; native permission dialogs, screen readers and OS presentation remain supervised.
+
+The [20-page compatibility sample](COMPATIBILITY.md) uses the production static core in Node, not Chrome, and records one fetch/extraction per URL without retaining bodies. Fifteen pages yielded readable static text; five were rejected/unavailable. This does not certify intended-element extraction, dynamic pages or future reliability. `scripts/compatibility.mjs` reruns it explicitly and contacts those sites from the developer machine; it is not default CI or extension behavior.
+
+The original evidence below is historical. Current run IDs, counts, artifacts and measurements belong in the upgrade handoff and must be checked against the final commit rather than inferred from the older results.
+
 Local type checking, linting, Vitest, production build and package validation are required. The unit suite covers URL/config validation, inert extraction, ambiguous prices, threshold/phrase transitions, exact diffs and policy evidence, baseline preservation, retries, quota errors, notification failures, credential-free bounded networking, IndexedDB retention and transaction behavior. It also verifies that picked text must be reproduced in public HTML and that manual checks preserve a paused schedule.
 
 `tests/browser.mjs` loads the actual built MV3 extension into Chromium with controlled synthetic pages. A temporary test manifest pre-grants one fixture origin. Production code and URL validation are unchanged. The suite exercises worker/popup/dashboard startup, monitor CRUD, scheduling via real Chrome alarm events, baseline/change persistence, notifications API records, missing selections, HTTP errors, redirects, response bounds, exports/imports, selection/cleanup, themes, responsive layout, and full browser restart recovery.

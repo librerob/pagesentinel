@@ -176,6 +176,10 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.info-box small {
+  display: block;
+  margin-top: 8px;
+}
 @media (max-width: 700px) {
   .side-by-side {
     grid-template-columns: 1fr;

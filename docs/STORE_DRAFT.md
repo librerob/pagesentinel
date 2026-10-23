@@ -1,5 +1,7 @@
 # Future Chrome Web Store draft — do not submit under the working name
 
+Historical v0.1.0 draft. For v0.2.0 claims, privacy disclosures, genuine screenshots and unresolved checks, use [release preparation](RELEASE_PREPARATION.md). No store submission has been made. Do not publish before the owner approves final naming and store submission.
+
 Short description: Local website monitoring with readable changes and clear monitor health. No account required.
 
 Description:
