@@ -312,13 +312,11 @@ describe("durable check state", () => {
 });
 describe("bounded credential-free network checks", () => {
   it("omits credentials and rejects automatic redirects", async () => {
-    const mock = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(
-        new Response("<p>Hello</p>", {
-          headers: { "content-type": "text/html; charset=utf-8" },
-        }),
-      );
+    const mock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("<p>Hello</p>", {
+        headers: { "content-type": "text/html; charset=utf-8" },
+      }),
+    );
     expect(await fetchHTML(c.url)).toBe("<p>Hello</p>");
     expect(mock.mock.calls[0][1]).toMatchObject({
       credentials: "omit",
