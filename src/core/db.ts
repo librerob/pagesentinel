@@ -319,7 +319,13 @@ async function setMonitor(
 }
 export async function putMonitor(m: Monitor) {
   await write(["monitors", "texts"], async (tx, usage) => {
+    const exists = await request<StoredMonitor | undefined>(
+      tx.objectStore("monitors").get(m.id),
+    );
     await setMonitor(tx, usage, m);
+    // Existing failure/health metadata can still be saved at the boundary, but
+    // removing the count cap must not allow unlimited new configuration writes.
+    if (!exists && usage.bytes > MAX_STORAGE) throw new Error(budgetError);
   });
 }
 export async function putMetadata(m: MonitorMetadata) {
