@@ -85,9 +85,10 @@ export async function check(
   original: Monitor,
   settings: Settings,
   deps: CheckDeps = production,
+  manual = false,
 ): Promise<Monitor> {
   const now = Date.now();
-  if (original.lease > now || original.paused) return original;
+  if (original.lease > now || (original.paused && !manual)) return original;
   let m = { ...original, lastAttempt: now, lease: now + 45_000 };
   let committed = false;
   await deps.save(m);

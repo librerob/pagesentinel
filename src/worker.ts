@@ -27,6 +27,7 @@ async function badge() {
   const issue = all.some(
     (m) =>
       m.error ||
+      m.notificationError ||
       m.permissionRequired ||
       (!m.paused && m.interval && m.nextCheck < Date.now() - 180_000),
   );
@@ -231,11 +232,25 @@ async function command(message: unknown) {
   if (msg.type === "resume" || msg.type === "retry") {
     if (
       !(await chrome.permissions.contains({ origins: [originPattern(m.url)] }))
-    )
-      throw new Error("Website permission is required. Use Grant access.");
+    ) {
+      const denied = {
+        ...m,
+        paused: true,
+        permissionRequired: true,
+        error: "Website permission is required. Grant access to resume checks.",
+      };
+      await db.putMonitor(denied);
+      return denied;
+    }
     return check(
-      { ...m, paused: false, permissionRequired: false },
+      {
+        ...m,
+        paused: msg.type === "resume" ? false : m.paused,
+        permissionRequired: false,
+      },
       await preferences(),
+      undefined,
+      msg.type === "retry",
     );
   }
   if (msg.type === "reset") {

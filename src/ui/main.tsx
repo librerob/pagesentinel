@@ -229,9 +229,6 @@ function App() {
                 <div>
                   <Status m={selected} />
                   <p>{health(selected).detail}</p>
-                  {selected.notificationError && (
-                    <p>{selected.notificationError}</p>
-                  )}
                 </div>
                 <button
                   className="primary"

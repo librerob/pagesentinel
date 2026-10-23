@@ -273,7 +273,7 @@ export function MonitorForm({
             </p>
           </>
         )}
-        <details open={value.kind === "price"}>
+        <details open={value.kind === "price" && !value.selector}>
           <summary>Page section & noise controls</summary>
           <label>
             CSS selector{" "}

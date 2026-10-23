@@ -237,6 +237,16 @@ describe("durable check state", () => {
     expect(result.error).toMatch(/differs from the public HTML/);
     expect(deps.commit).not.toHaveBeenCalled();
   });
+  it("can check a paused monitor manually without resuming its schedule", async () => {
+    const result = await check(
+      { ...newMonitor(c), paused: true },
+      defaultSettings,
+      deps,
+      true,
+    );
+    expect(result.paused).toBe(true);
+    expect(result.lastSuccess).toBeGreaterThan(0);
+  });
   it("creates a baseline, records changes once, and preserves unread until acknowledged", async () => {
     let m = await check(newMonitor(c), defaultSettings, deps);
     expect(m.lastSuccess).toBeGreaterThan(0);

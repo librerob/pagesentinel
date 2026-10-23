@@ -113,6 +113,12 @@ export function health(
     };
   if (m.error)
     return { label: "Needs attention", tone: "error", detail: m.error };
+  if (m.notificationError && m.notify)
+    return {
+      label: "Notifications blocked",
+      tone: "warning",
+      detail: m.notificationError,
+    };
   if (m.interval && m.nextCheck && now > m.nextCheck + 180_000)
     return {
       label: "Overdue",

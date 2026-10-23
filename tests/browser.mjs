@@ -159,6 +159,24 @@ try {
   assert.equal(product.baseline, "€299");
   const createMs = Math.round(performance.now() - started);
   pass("Creates selected-price monitor and verifies public HTML baseline");
+  await ui
+    .getByRole("button", { name: "Add monitor", exact: true })
+    .first()
+    .click();
+  await ui
+    .getByLabel("Website URL", { exact: true })
+    .fill(`${base}/announcements`);
+  await ui.getByLabel("Name", { exact: true }).fill("Release announcements");
+  await ui.getByRole("button", { name: "Allow & start monitoring" }).click();
+  await ui.getByRole("dialog").waitFor({ state: "hidden" });
+  const createdInUI = (await api("state")).monitors.find(
+    (m) => m.title === "Release announcements",
+  );
+  assert(createdInUI?.lastSuccess > 0);
+  await api("delete", { id: createdInUI.id });
+  pass(
+    "Monitor creation form requests existing fixture access and saves a verified monitor",
+  );
   let policy = await api("save", {
     config: {
       ...defaults,
