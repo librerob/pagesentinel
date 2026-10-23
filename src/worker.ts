@@ -24,7 +24,7 @@ async function preferences(): Promise<Settings> {
   }
 }
 async function badge() {
-  const all = await db.monitors();
+  const all = await db.monitorMetadata();
   const issue = all.some(
     (m) =>
       m.error ||
@@ -46,7 +46,7 @@ async function reconcile(run: boolean) {
   });
   if (!(await chrome.alarms.get("scheduler")))
     await chrome.alarms.create("scheduler", { periodInMinutes: 1 });
-  const all = await db.monitors(),
+  const all = await db.monitorMetadata(),
     prefs = await preferences();
   let index = 0;
   for (let m of all) {
@@ -54,7 +54,7 @@ async function reconcile(run: boolean) {
       !(await chrome.permissions.contains({ origins: [originPattern(m.url)] }))
     ) {
       if (!m.permissionRequired)
-        await db.putMonitor({
+        await db.putMetadata({
           ...m,
           paused: true,
           permissionRequired: true,
@@ -70,17 +70,17 @@ async function reconcile(run: boolean) {
         error: "The previous check was interrupted. A retry is scheduled.",
         nextCheck: Date.now() + index++ * 15_000,
       };
-      await db.putMonitor(m);
+      await db.putMetadata(m);
     }
     if (!m.paused && m.interval && m.nextCheck < Date.now() - 180_000 && !run) {
-      await db.putMonitor({
+      await db.putMetadata({
         ...m,
         nextCheck: Date.now() + 15_000 + index++ * 15_000,
       });
     }
   }
   if (run) {
-    const due = (await db.monitors())
+    const due = (await db.monitorMetadata())
       .filter(
         (m) =>
           !m.paused &&
@@ -90,7 +90,10 @@ async function reconcile(run: boolean) {
       )
       .sort((a, b) => a.nextCheck - b.nextCheck)
       .slice(0, 3);
-    for (const m of due) await check(m, prefs);
+    for (const metadata of due) {
+      const m = await db.monitor(metadata.id);
+      if (m) await check(m, prefs);
+    }
   }
   await badge();
 }
@@ -112,7 +115,10 @@ async function command(message: unknown) {
     throw new Error("Invalid extension message.");
   const msg = message as Record<string, unknown>;
   if (msg.type === "state")
-    return { monitors: await db.monitors(), settings: await preferences() };
+    return {
+      monitors: await db.monitorMetadata(),
+      settings: await preferences(),
+    };
   if (msg.type === "save") {
     const c = config(msg.config);
     if (
@@ -127,11 +133,9 @@ async function command(message: unknown) {
         "Website access was denied. Grant permission before saving.",
       );
     const existing =
-      typeof msg.id === "string"
-        ? (await db.monitors()).find((m) => m.id === msg.id)
-        : undefined;
+      typeof msg.id === "string" ? await db.monitor(msg.id) : undefined;
     if (msg.id && !existing) throw new Error("Monitor not found.");
-    if ((await db.monitors()).length >= 500 && !existing)
+    if ((await db.monitorMetadata()).length >= 500 && !existing)
       throw new Error(
         "This local profile has reached its safety budget of 500 monitors. Export or remove unused monitors.",
       );
@@ -170,8 +174,8 @@ async function command(message: unknown) {
     const value = validateSettings(msg.settings);
     await chrome.storage.local.set({ settings: value });
     // Apply shorter retention immediately, without changing successful baselines.
-    for (const m of await db.monitors())
-      await db.commitCheck(m, undefined, value.retention);
+    for (const m of await db.monitorMetadata())
+      await db.pruneHistory(m.id, value.retention);
     return value;
   }
   if (msg.type === "export")
@@ -184,7 +188,7 @@ async function command(message: unknown) {
     };
   if (msg.type === "import") {
     const items = importConfigs(msg.data);
-    if ((await db.monitors()).length + items.length > 500)
+    if ((await db.monitorMetadata()).length + items.length > 500)
       throw new Error(
         "Import would exceed the local safety budget of 500 monitors.",
       );
@@ -196,7 +200,7 @@ async function command(message: unknown) {
     return true;
   }
   if (msg.type === "resetAll") {
-    for (const m of await db.monitors()) await db.removeMonitor(m.id);
+    for (const m of await db.monitorMetadata()) await db.removeMonitor(m.id);
     await chrome.storage.local.clear();
     const grants = await chrome.permissions.getAll();
     if (grants.origins?.length)
@@ -215,21 +219,27 @@ async function command(message: unknown) {
     return true;
   }
   const id = typeof msg.id === "string" ? msg.id : "";
-  const m = (await db.monitors()).find((m) => m.id === id);
-  if (!m) throw new Error("Monitor not found.");
+  const metadata = (await db.monitorMetadata()).find((m) => m.id === id);
+  if (!metadata) throw new Error("Monitor not found.");
   if (msg.type === "history") return db.snapshots(id);
   if (msg.type === "delete") {
     await db.removeMonitor(id);
     return true;
   }
   if (msg.type === "read") {
-    await db.putMonitor({ ...m, unread: 0 });
+    await db.putMetadata({ ...metadata, unread: 0 });
     return true;
   }
   if (msg.type === "pause") {
-    await db.putMonitor({ ...m, paused: true });
+    await db.putMetadata({ ...metadata, paused: true });
     return true;
   }
+  if (msg.type === "clearHistory") {
+    await db.clearHistory(id);
+    return true;
+  }
+  const m = await db.monitor(id);
+  if (!m) throw new Error("Monitor not found.");
   if (msg.type === "resume" || msg.type === "retry") {
     if (
       !(await chrome.permissions.contains({ origins: [originPattern(m.url)] }))
@@ -266,10 +276,6 @@ async function command(message: unknown) {
       unread: 0,
       lastSuccess: 0,
     });
-    return true;
-  }
-  if (msg.type === "clearHistory") {
-    await db.clearHistory(id);
     return true;
   }
   throw new Error("Unknown extension action.");

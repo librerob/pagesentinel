@@ -120,7 +120,7 @@ async function editDB(id, change) {
   await ui.evaluate(
     async ({ id, change }) => {
       const db = await new Promise((resolve, reject) => {
-        const r = indexedDB.open("pagesentinel", 1);
+        const r = indexedDB.open("pagesentinel");
         r.onsuccess = () => resolve(r.result);
         r.onerror = () => reject(r.error);
       });
@@ -503,7 +503,7 @@ try {
   await worker.evaluate(() => chrome.alarms.clear("scheduler"));
   await context.close();
   await launch();
-  const persisted = await api("state");
+  const persisted = await api("export");
   assert.equal(persisted.settings.theme, "dark");
   assert.equal(persisted.settings.accent, "violet");
   assert(

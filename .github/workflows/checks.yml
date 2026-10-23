@@ -25,6 +25,7 @@ jobs:
       - run: npm run build
       - run: npm run validate
       - run: node scripts/benchmark.mjs
+      - run: node scripts/storage-benchmark.mjs
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
       - run: npm run package

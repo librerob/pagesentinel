@@ -36,6 +36,7 @@ Allow access to the selected website when Chrome asks. The first background chec
 - Text and policy thresholds accumulate edits against the last alert (or initial baseline); small successive edits no longer disappear through baseline drift.
 - Material Design 3 semantic themes: System, Light, Dark, and true-black AMOLED; six accent choices. Roboto is bundled locally.
 - Bounded local history, JSON export including history, and validated configuration import as paused copies.
+- Version 2 storage separates baseline/reference text from lightweight metadata. Scheduled ticks and badge updates avoid reading every monitor's text; successful checks account only for the selected monitor and its retained versions.
 
 ## How checks work
 
@@ -52,6 +53,8 @@ Host access is optional and requested per selected origin. No broad mandatory we
 Monitored websites receive ordinary requests from your network address. No monitoring data is sent to a developer-controlled backend. Checks omit credentials and referrers, reject embedded URL credentials and redirects, and do not reproduce a signed-in session. See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
 
 ## Boundaries
+
+The 50 MiB limit measures logical UTF-8 monitor/history records, not physical IndexedDB/index overhead. Version 1 data migrates in one transaction without dropping history. If adding missing alert references puts an existing profile over budget, checks report a storage error until you export and clear history, reset unused baselines, or remove unused monitors. The migration uses the latest retained alert/initial version for missing references, falling back to the current baseline when that history is unavailable.
 
 Prices require exactly one explicit currency label. Bare `kr` is kept as `kr`, not guessed as NOK/SEK/DKK. A bare amount such as `1.299,-` still fails because it has no currency; `kr 1.299,-` is supported. Ambiguous decimal/thousands separators require an explicit decimal choice.
 

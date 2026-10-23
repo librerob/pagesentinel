@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { defaults, type Config, type Monitor } from "../core/model";
+import {
+  defaults,
+  type Config,
+  type MonitorMetadata as Monitor,
+} from "../core/model";
 import { config, originPattern } from "../core/validation";
 import { api } from "./api";
 import { Icon } from "./icons";

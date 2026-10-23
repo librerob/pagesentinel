@@ -1,6 +1,11 @@
 import { StrictMode, useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { BRAND, health, type Monitor, type Settings } from "../core/model";
+import {
+  BRAND,
+  health,
+  type MonitorMetadata as Monitor,
+  type Settings,
+} from "../core/model";
 import { originPattern } from "../core/validation";
 import { api, appearance, emptyState, relative, when, type State } from "./api";
 import { Icon, Logo } from "./icons";

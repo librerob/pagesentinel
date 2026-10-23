@@ -24,4 +24,6 @@ Imports are at most 10 MiB and 500 configurations, validated completely before a
 
 ## Reporting
 
+IndexedDB version 2 migrates in one atomic version-change transaction. Baseline/reference text is stored separately from lightweight monitor metadata; a successful check commits text, history, pruning metadata and its byte ledger atomically. Quota rejection rolls back all those writes. The budget uses per-record UTF-8 sizes and the original logical JSON-array accounting, excluding physical database/index overhead. Migration never evicts existing data to fit the budget. Existing over-budget profiles keep their data and fail checks visibly until cleaned up; metadata-only health updates remain accounted and possible at the boundary.
+
 Report vulnerabilities through [GitHub private vulnerability reporting](https://github.com/librerob/pagesentinel/security/advisories/new) when available. If disabled, open a minimal public issue asking for a private contact without including exploit details, sensitive URLs or page content. There is no guaranteed response SLA. v0.1.0 is a preview and needs supervised permission/notification checks before Web Store submission.

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Monitor, Snapshot } from "../core/model";
+import type { MonitorMetadata as Monitor, Snapshot } from "../core/model";
 import { policyEvidence, wordDiff } from "../core/compare";
 import { api, when } from "./api";
 import { Icon } from "./icons";

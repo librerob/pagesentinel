@@ -61,6 +61,10 @@ export interface Snapshot {
   alert: boolean;
   initial: boolean;
 }
+export type MonitorMetadata = Omit<
+  Monitor,
+  "baseline" | "referenceText" | "initialPreview"
+>;
 export interface Settings {
   theme: "system" | "light" | "dark" | "amoled";
   accent: "blue" | "teal" | "violet" | "green" | "rose" | "neutral";
@@ -91,7 +95,7 @@ export const defaults: Config = {
   notify: true,
 };
 export function health(
-  m: Monitor,
+  m: MonitorMetadata,
   now = Date.now(),
 ): { label: string; tone: string; detail: string } {
   if (m.permissionRequired)

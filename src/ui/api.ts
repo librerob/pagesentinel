@@ -1,4 +1,8 @@
-import { defaultSettings, type Monitor, type Settings } from "../core/model";
+import {
+  defaultSettings,
+  type MonitorMetadata as Monitor,
+  type Settings,
+} from "../core/model";
 export async function api<T = unknown>(
   type: string,
   rest: Record<string, unknown> = {},
