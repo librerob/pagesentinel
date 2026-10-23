@@ -1,10 +1,17 @@
 name: Release
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish a GitHub preview release after all checks (main only)
+        type: boolean
+        required: true
+        default: false
 permissions:
   contents: read
 jobs:
   release:
+    if: github.ref == 'refs/heads/main' && inputs.publish == true
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -23,7 +30,9 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
       - run: npm run package
-      - run: gh release create v0.1.0 artifacts/pagesentinel-0.1.0.zip artifacts/SHA256SUMS --target "$GITHUB_SHA" --title "PageSentinel v0.1.0 preview" --notes-file docs/RELEASE_NOTES.md --prerelease
+      - run: |
+          version=$(node -p "require('./package.json').version")
+          gh release create "v$version" "artifacts/pagesentinel-$version.zip" artifacts/SHA256SUMS --target "$GITHUB_SHA" --title "PageSentinel v$version preview" --notes-file docs/RELEASE_NOTES.md --prerelease
         env:
           GH_TOKEN: ${{ github.token }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

@@ -1,16 +1,18 @@
 # PageSentinel
 
-Local website monitoring for Chrome. Follow a page or select a price, paragraph, or announcement. Review the actual wording that changed, and see when a monitor needs attention.
+Local website monitoring for Chrome. Follow a page, a price or a company's policies. Review the actual wording that changed, and see when a monitor needs attention.
 
 Free software under GPL-3.0-or-later. No accounts, subscriptions, ads, telemetry, or developer backend.
 
-![The dashboard with two synthetic monitors](docs/screenshots/dashboard-light.png)
+![Privacy Watch with synthetic company documents](docs/screenshots/privacy-watch-light.png)
 
 Screenshots show the actual built extension with controlled synthetic product and policy pages.
 
 **Working title:** an unrelated commercial website monitor also uses PageSentinel. This project is not affiliated with it. The name is provisional; no Chrome Web Store listing has been submitted.
 
 ## Install
+
+The published release is still v0.1.0. The v0.2.0 preview described below is developed in reviewable pull requests; successful CI artifacts provide its installable ZIP. Build a source checkout with the commands below. Update the same installed extension/profile to preserve its storage; another extension ID creates separate storage. Back up before upgrading.
 
 1. Download `pagesentinel-0.1.0.zip` from [Releases](https://github.com/librerob/pagesentinel/releases).
 2. Extract the ZIP into a folder you intend to keep.
@@ -20,7 +22,14 @@ Screenshots show the actual built extension with controlled synthetic product an
 
 Allow access to the selected website when Chrome asks. The first background check establishes a verified baseline; a failed first check is shown as needing attention. It never pretends that monitoring succeeded.
 
-## What works in v0.1.0
+## What works in the v0.2.0 preview
+
+- Overview introduces Monitor a Website, Privacy Watch and My Monitors. Skippable onboarding persists across restarts; technical controls stay in contextual advanced sections.
+- Privacy Watch company profiles group confirmed policy documents, shared schedules, individual overrides, regional labels and monitoring health. Removing a company preserves its documents/history.
+- Find actual policy links in English, Norwegian, Spanish, German and French. Review candidates and authorize every selected origin; no invented URLs or silent crawling.
+- Paginated cross-monitor timelines, inline/before/after/side-by-side views, exact policy evidence and conservative keyword categories. Paragraph reordering is distinguished from changed wording.
+- Guided selector repair, atomic bulk management, notification snoozing, website-grant removal and optional passphrase-encrypted backup files.
+- Stable-link new-item detection ignores ordering/label changes. Complete-message availability matching rejects negated/ambiguous states; generic keyword mode remains available.
 
 - Full-page public HTML text and a uniquely selected element.
 - Selected sections can be monitored beside unrelated login modals; sign-in titles, challenges, and password fields inside the selection still fail visibly.
@@ -44,11 +53,11 @@ The service worker fetches the approved public URL without credentials and parse
 
 Failed checks retain the previous baseline. The dashboard shows last attempt, last success, expected next check, failures, permission state, and actionable explanations. The toolbar badge shows `!` when attention is needed. Browser and OS notification settings may suppress alerts, so the dashboard is the source of truth.
 
-Checks run while Chrome is active. Chrome can delay alarms during sleep or load. This is not a guaranteed 24/7 service. The scheduler processes up to three due monitors per minute, one at a time; large watchlists or short intervals will become overdue visibly. Resource budgets are safety controls, not paid tiers: 500 configurations per profile, 2 MiB per HTML response, 120,000 extracted characters, 18-second fetch timeout, 10–200 versions per monitor, and 50 MiB of monitoring data.
+Checks run while Chrome is active. Chrome can delay alarms during sleep or load. This is not a guaranteed 24/7 service. The scheduler processes up to three due monitors per minute, one at a time; large watchlists or short intervals will become overdue visibly. There is no fixed total monitor-count cap. Resource budgets are safety controls, not paid tiers: 2 MiB per HTML response, 120,000 extracted characters, 18-second fetch timeout, 10–200 versions per monitor, and 50 MiB of logical monitoring data. Discovery, bulk actions and list extraction also have per-action processing bounds.
 
 ## Privacy and permissions
 
-Host access is optional and requested per selected origin. No broad mandatory website access, cookies API, browser history API, analytics, cloud sync, or remote executable code is used. Monitoring data is kept in local IndexedDB; small preferences use `chrome.storage.local`. It is not encrypted by the extension. Exported JSON is also plain text.
+Host access is optional and requested per selected origin. No broad mandatory website access, cookies API, browser history API, analytics, cloud sync, or remote executable code is used. Monitoring data is kept in local IndexedDB; preferences and onboarding use `chrome.storage.local`. Session storage temporarily holds selection, repair and discovery context. Normal storage is plaintext. Optional backup encryption uses native AES-256-GCM with passphrase-derived keys; the passphrase is never saved. Plain JSON export remains available with a warning. Chrome grants cover paths and may cover ports beyond a saved URL.
 
 Monitored websites receive ordinary requests from your network address. No monitoring data is sent to a developer-controlled backend. Checks omit credentials and referrers, reject embedded URL credentials and redirects, and do not reproduce a signed-in session. See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
 
@@ -60,9 +69,11 @@ Prices require exactly one explicit currency label. Bare `kr` is kept as `kr`, n
 
 Redirects remain rejected by design to prevent unapproved-host contact, including private addresses. Open a redirecting URL in your browser, then paste its final address or use **Monitor this page** / **Select an element** from the final page. Both setup flows save Chrome's current final tab URL.
 
-Dynamic JavaScript rendering, authenticated monitoring, screenshots, PDFs, automation macros, selector recovery, company groups, unified Privacy Watch timelines, and encrypted backups are deferred. Selection succeeds only if the corresponding unique element exists in public HTML. CSS-hidden content cannot always be recognized without rendering; choose the specific section when needed. Keyword highlights identify potentially relevant passages, not legal conclusions. Reordered paragraphs are presented as removals/additions.
+Dynamic JavaScript rendering, authenticated monitoring, screenshots, PDFs, automation macros, XPath, arbitrary regular expressions and automatic selector substitution are not implemented. Selection succeeds only if the corresponding unique element exists in public HTML. CSS-hidden content cannot always be recognized without rendering; choose the specific section when needed. A unique main/article landmark narrows policy extraction, otherwise the whole-page fallback is retained. Keyword categories identify potentially relevant changed passages, not legal conclusions or risk scores. Regional variants require distinct source URLs.
 
-Import restores configurations as paused copies and requires origin access before resuming. Exported historical text stays in the backup for archival use; it is not imported as a trusted live baseline. Labels and arbitrary regular expressions are not implemented.
+Import restores monitor/company configurations with fresh IDs as paused copies and requires origin access before resuming. Current appearance settings remain unchanged. Exported historical text stays archival in the backup; it is not imported into the live timeline or trusted as a baseline. Encrypted/decrypted content is bounded at 64 MiB; encrypted file input allows 90 MiB for base64 overhead. Lost passphrases cannot be recovered. Normal local storage remains plaintext.
+
+Availability requires an exact complete stock message. New-item monitoring requires stable, unique public link URLs; empty or ambiguous lists fail visibly. Changing link query parameters can look like a new entry. Timeline filters apply to loaded versions; load older versions to search further. Automated accessibility checks and expert review do not establish full WCAG compliance or superiority over competitors.
 
 ## Development
 
@@ -85,6 +96,6 @@ Load `dist/` unpacked after building. The release ZIP is written to `artifacts/`
 
 Browser tests use controlled synthetic pages, a temporary extension copy with one test host pre-granted, and a fresh profile. The shipping manifest has no mandatory host access. Set `CHROMIUM_PATH` to a Chrome for Testing executable if needed. Native permission prompts and OS notification presentation need supervised checks. See [validation](docs/VALIDATION.md), [architecture](docs/ARCHITECTURE.md), [research](docs/RESEARCH.md), and [contribution guidance](CONTRIBUTING.md).
 
-## Next: v0.2.0
+## Preview evidence and next work
 
-Start with supervised daily-use reliability and permission testing. Then add Privacy Watch company groups and a shared timeline for multiple confirmed policy documents. Optional dynamic rendering should remain a separately permissioned, tested mode.
+See [Privacy Watch](docs/PRIVACY_WATCH.md), [backup and monitoring controls](docs/BACKUPS_AND_MONITORING.md), [migration](docs/MIGRATION_V3.md), [security review](docs/SECURITY_REVIEW.md), [public-page sample](docs/COMPATIBILITY.md), [usability review and participant plan](docs/USABILITY.md), and [rendered-mode investigation](docs/DYNAMIC_MONITORING.md). Public-site sampling uses the production core in Node; it is not Chrome compatibility certification. Screenshots and Chromium scenarios use the actual built extension with controlled fixtures. Native permission dialogs, OS notifications, assistive technology and real-user usability still need supervised checks. This remains a preview; no store submission or production-readiness claim is made.

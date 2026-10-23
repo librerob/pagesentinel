@@ -1,0 +1,147 @@
+{
+  "date": "2026-10-23T23:16:52.766Z",
+  "environment": "Node v24.22.1 win32",
+  "limitations": "One static fetch/extraction per URL using production core functions in Node, not a Chrome extension compatibility certification or repeated monitoring test. Success means readable text was extracted, not that the intended price/job appeared or that future checks will work. Failures do not establish that rendered mode would help. Redirect destinations are not inspected. Sites and network conditions change. No response bodies are retained in this report.",
+  "results": [
+    {
+      "category": "Traditional HTML",
+      "url": "https://example.com/",
+      "status": "Static extraction succeeded",
+      "characters": 156,
+      "elapsedMs": 423
+    },
+    {
+      "category": "Traditional HTML",
+      "url": "https://info.cern.ch/",
+      "status": "Static extraction succeeded",
+      "characters": 277,
+      "elapsedMs": 618
+    },
+    {
+      "category": "Software releases",
+      "url": "https://www.python.org/downloads/",
+      "status": "Static extraction succeeded",
+      "characters": 20980,
+      "elapsedMs": 377
+    },
+    {
+      "category": "Software package",
+      "url": "https://pypi.org/project/pip/",
+      "status": "Static extraction succeeded",
+      "characters": 20042,
+      "elapsedMs": 319
+    },
+    {
+      "category": "JavaScript-heavy downloads",
+      "url": "https://nodejs.org/en/download",
+      "status": "Static extraction succeeded",
+      "characters": 1485,
+      "elapsedMs": 572
+    },
+    {
+      "category": "Software releases",
+      "url": "https://github.com/nodejs/node/releases",
+      "status": "Static extraction succeeded",
+      "characters": 48409,
+      "elapsedMs": 2374
+    },
+    {
+      "category": "Documentation",
+      "url": "https://developer.chrome.com/docs/extensions/",
+      "status": "Static extraction succeeded",
+      "characters": 4604,
+      "elapsedMs": 1367
+    },
+    {
+      "category": "Documentation",
+      "url": "https://developer.mozilla.org/en-US/docs/Web",
+      "status": "Static extraction succeeded",
+      "characters": 6801,
+      "elapsedMs": 559
+    },
+    {
+      "category": "News",
+      "url": "https://www.bbc.com/news",
+      "status": "Static extraction succeeded",
+      "characters": 8896,
+      "elapsedMs": 643
+    },
+    {
+      "category": "News",
+      "url": "https://www.theguardian.com/international",
+      "status": "Static extraction succeeded",
+      "characters": 20839,
+      "elapsedMs": 718
+    },
+    {
+      "category": "News",
+      "url": "https://www.npr.org/",
+      "status": "Static extraction succeeded",
+      "characters": 53074,
+      "elapsedMs": 1638
+    },
+    {
+      "category": "Job listings",
+      "url": "https://boards.greenhouse.io/",
+      "status": "Not supported by this probe",
+      "reason": "Could not fetch the public page. The website may be unavailable, or this URL may redirect. Open it in your browser, then paste the final address or use \"Monitor this page\" / \"Select an element\" on that final page. Redirects stay blocked to avoid contacting unapproved hosts.",
+      "elapsedMs": 610
+    },
+    {
+      "category": "Job listings",
+      "url": "https://jobs.lever.co/",
+      "status": "Not supported by this probe",
+      "reason": "Could not fetch the public page. The website may be unavailable, or this URL may redirect. Open it in your browser, then paste the final address or use \"Monitor this page\" / \"Select an element\" on that final page. Redirects stay blocked to avoid contacting unapproved hosts.",
+      "elapsedMs": 780
+    },
+    {
+      "category": "E-commerce",
+      "url": "https://www.ebay.com/",
+      "status": "Not supported by this probe",
+      "reason": "The website blocked this check or requires sign-in.",
+      "elapsedMs": 535
+    },
+    {
+      "category": "E-commerce",
+      "url": "https://www.ikea.com/gb/en/",
+      "status": "Not supported by this probe",
+      "reason": "Page exceeds the 2 MiB download limit.",
+      "elapsedMs": 1022
+    },
+    {
+      "category": "Privacy policy",
+      "url": "https://policies.google.com/privacy?hl=en",
+      "status": "Static extraction succeeded",
+      "characters": 90886,
+      "elapsedMs": 903
+    },
+    {
+      "category": "Privacy statement",
+      "url": "https://privacy.microsoft.com/en-us/privacystatement",
+      "status": "Not supported by this probe",
+      "reason": "Could not fetch the public page. The website may be unavailable, or this URL may redirect. Open it in your browser, then paste the final address or use \"Monitor this page\" / \"Select an element\" on that final page. Redirects stay blocked to avoid contacting unapproved hosts.",
+      "elapsedMs": 425
+    },
+    {
+      "category": "Privacy policy",
+      "url": "https://www.mozilla.org/en-US/privacy/websites/",
+      "status": "Static extraction succeeded",
+      "characters": 9948,
+      "elapsedMs": 652
+    },
+    {
+      "category": "Privacy policy",
+      "url": "https://duckduckgo.com/privacy",
+      "status": "Static extraction succeeded",
+      "characters": 13689,
+      "elapsedMs": 690
+    },
+    {
+      "category": "Terms and privacy",
+      "url": "https://signal.org/legal/",
+      "status": "Static extraction succeeded",
+      "characters": 14000,
+      "elapsedMs": 1097
+    }
+  ]
+}
