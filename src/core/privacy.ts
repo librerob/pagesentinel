@@ -113,7 +113,7 @@ export function companyConfig(input: unknown, existing?: Company): Company {
   const url = webURL(x.url).href;
   if (
     !Array.isArray(x.domains) ||
-    x.domains.length > 80 ||
+    x.domains.length > 2000 ||
     !x.domains.every((d) => typeof d === "string")
   )
     throw new Error("Invalid associated domains.");
@@ -176,6 +176,8 @@ export function companyHealth(
             ? "Awaiting first check"
             : documents.every((m) => m.paused)
               ? "Documents paused"
-              : "Checks succeeding",
+              : documents.every((m) => !m.interval)
+                ? "Manual only"
+                : "Checks succeeding",
   };
 }

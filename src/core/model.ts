@@ -1,9 +1,11 @@
 export const BRAND = "PageSentinel";
+export const APP_VERSION = "0.2.0";
 export const VERSION = 1;
 export const MAX_TEXT = 120_000;
 export const MAX_BYTES = 2 * 1024 * 1024;
 export const MAX_STORAGE = 50 * 1024 * 1024;
-export type Kind = "text" | "policy" | "keyword" | "price" | "availability";
+export type Kind =
+  "text" | "policy" | "keyword" | "price" | "availability" | "items";
 export type Condition =
   | "any"
   | "appears"
@@ -34,6 +36,7 @@ export interface Config {
   language?: string;
   region?: string;
   inheritInterval?: boolean;
+  itemSelector?: string;
 }
 export type PolicyType =
   | "privacy"
@@ -145,7 +148,21 @@ export function health(
       detail: "Reading the public page…",
     };
   if (m.error)
-    return { label: "Needs attention", tone: "error", detail: m.error };
+    return {
+      label: /selector|Selected element is missing/.test(m.error)
+        ? "Selected content missing"
+        : /requires sign-in|requires sign.in|human verification/i.test(m.error)
+          ? "Sign-in or verification"
+          : /HTTP|Could not fetch|timed out|website blocked/i.test(m.error)
+            ? "Website unavailable"
+            : /extract|readable text|processing limit|Selected text exceeds/i.test(
+                  m.error,
+                )
+              ? "Extraction failed"
+              : "Needs attention",
+      tone: "error",
+      detail: m.error,
+    };
   if (m.notificationError && m.notify)
     return {
       label: "Notifications blocked",

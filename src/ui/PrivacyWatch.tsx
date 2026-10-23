@@ -108,7 +108,8 @@ export function PrivacyWatch({
               </div>
               {company.description && <p>{company.description}</p>}
               <p className="note">
-                {status.documents} documents · {status.unread} unread alerts
+                {status.documents} documents · {status.unread} unread{" "}
+                {status.unread === 1 ? "alert" : "alerts"}
                 <br />
                 All documents last succeeded: {when(status.lastSuccess)}
               </p>
