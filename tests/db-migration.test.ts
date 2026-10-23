@@ -81,7 +81,7 @@ describe("version 1 migration and byte ledger", () => {
         },
       ];
     await versionOne([m], history);
-    expect((await db.database()).version).toBe(2);
+    expect((await db.database()).version).toBe(3);
     expect(await db.monitor(m.id)).toMatchObject({
       baseline: m.baseline,
       hash: m.hash,

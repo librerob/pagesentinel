@@ -29,6 +29,29 @@ export interface Config {
   ignoreText: string;
   threshold: number;
   notify: boolean;
+  companyId?: string;
+  policyType?: PolicyType;
+  language?: string;
+  region?: string;
+  inheritInterval?: boolean;
+}
+export type PolicyType =
+  | "privacy"
+  | "terms"
+  | "cookies"
+  | "retention"
+  | "deletion"
+  | "security"
+  | "other";
+export interface Company {
+  id: string;
+  name: string;
+  url: string;
+  domains: string[];
+  description: string;
+  interval: number;
+  paused: boolean;
+  created: number;
 }
 export interface Monitor extends Config {
   id: string;
@@ -51,6 +74,7 @@ export interface Monitor extends Config {
   currency?: string;
   notificationError?: string;
   initialPreview?: string;
+  companyPaused?: boolean;
 }
 export interface Snapshot {
   id: string;
@@ -104,11 +128,13 @@ export function health(
       tone: "error",
       detail: "Website access was removed. Grant access to resume checks.",
     };
-  if (m.paused)
+  if (m.paused || m.companyPaused)
     return {
       label: "Paused",
       tone: "muted",
-      detail: "Scheduled checks are paused.",
+      detail: m.companyPaused
+        ? "The company is paused. Individual document preferences are kept."
+        : "Scheduled checks are paused.",
     };
   if (m.lease > now)
     return {

@@ -3,8 +3,9 @@ import {
   type Monitor,
   type MonitorMetadata,
   type Snapshot,
+  type Company,
 } from "./model";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const budgetError =
   "The 50 MiB local history budget is full. Export and clear older history before retrying.";
 type StoredMonitor = MonitorMetadata & { recordBytes: number };
@@ -25,6 +26,7 @@ interface Usage {
   bytes: number;
   monitors: number;
   snapshots: number;
+  companies?: number;
 }
 const emptyUsage = (): Usage => ({
   id: "usage",
@@ -82,6 +84,8 @@ export function complete(tx: IDBTransaction): Promise<void> {
   });
 }
 function migrate(db: IDBDatabase, tx: IDBTransaction, oldVersion: number) {
+  db.createObjectStore("companies", { keyPath: "id" });
+  if (oldVersion >= 2) return;
   if (oldVersion === 0) {
     db.createObjectStore("monitors", { keyPath: "id" });
     db.createObjectStore("snapshots", { keyPath: "id" }).createIndex(
@@ -395,5 +399,75 @@ export async function addImported(items: Monitor[]) {
   await write(["monitors", "texts"], async (tx, usage) => {
     for (const item of items) await setMonitor(tx, usage, item, true);
     if (usage.bytes > MAX_STORAGE) throw new Error(budgetError);
+  });
+}
+
+export async function companies(): Promise<Company[]> {
+  const db = await database();
+  return request(db.transaction("companies").objectStore("companies").getAll());
+}
+// Company controls and affected document metadata commit together. Text is never
+// loaded here; individual document pause choices survive company pause/resume.
+export async function saveCompany(company: Company, documents: Monitor[] = []) {
+  await write(["companies", "monitors", "texts"], async (tx, usage) => {
+    const store = tx.objectStore("companies");
+    const old = await request<Company | undefined>(store.get(company.id));
+    const count = usage.companies ?? 0;
+    usage.bytes +=
+      recordBytes(company) -
+      (old ? recordBytes(old) : 0) +
+      (old ? 0 : count ? 1 : 2);
+    usage.companies = count + (old ? 0 : 1);
+    store.put(company);
+    const monitors = tx.objectStore("monitors");
+    for (const item of await request<StoredMonitor[]>(monitors.getAll())) {
+      if (item.companyId !== company.id) continue;
+      const metadata = {
+        ...publicMetadata(item),
+        companyPaused: company.paused,
+        ...(item.inheritInterval !== false
+          ? { interval: company.interval, nextCheck: Date.now() }
+          : {}),
+      };
+      const bytes =
+        item.recordBytes -
+        recordBytes(publicMetadata(item)) +
+        recordBytes(metadata);
+      usage.bytes += bytes - item.recordBytes;
+      monitors.put({ ...metadata, recordBytes: bytes });
+    }
+    for (const document of documents) {
+      if (document.companyId !== company.id)
+        throw new Error("Invalid company document.");
+      await setMonitor(tx, usage, document, true);
+    }
+    if (usage.bytes > MAX_STORAGE) throw new Error(budgetError);
+  });
+}
+export async function removeCompany(id: string) {
+  await write(["companies", "monitors"], async (tx, usage) => {
+    const store = tx.objectStore("companies"),
+      old = await request<Company | undefined>(store.get(id));
+    if (!old) throw new Error("Company not found.");
+    const count = usage.companies ?? 1;
+    usage.bytes -= recordBytes(old) + (count === 1 ? 2 : 1);
+    usage.companies = count - 1;
+    store.delete(id);
+    const monitors = tx.objectStore("monitors");
+    for (const item of await request<StoredMonitor[]>(monitors.getAll())) {
+      if (item.companyId !== id) continue;
+      const metadata = {
+        ...publicMetadata(item),
+        companyId: undefined,
+        companyPaused: undefined,
+        inheritInterval: undefined,
+      };
+      const bytes =
+        item.recordBytes -
+        recordBytes(publicMetadata(item)) +
+        recordBytes(metadata);
+      usage.bytes += bytes - item.recordBytes;
+      monitors.put({ ...metadata, recordBytes: bytes });
+    }
   });
 }
