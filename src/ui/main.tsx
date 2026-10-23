@@ -21,6 +21,7 @@ function App() {
   const [state, setState] = useState<State>(emptyState),
     [route, setRoute] = useState(location.hash.slice(1) || "overview");
   const [error, setError] = useState(""),
+    [ready, setReady] = useState(false),
     [busy, setBusy] = useState(""),
     [filter, setFilter] = useState("all"),
     [query, setQuery] = useState("");
@@ -33,8 +34,15 @@ function App() {
   const [, tick] = useState(0);
   const refresh = useCallback(() => {
     void api<State>("state")
-      .then(setState)
-      .catch((e) => setError(e.message));
+      .then((value) => {
+        appearance(value.settings);
+        setState(value);
+        setReady(true);
+      })
+      .catch((e) => {
+        setError(e.message);
+        setReady(true);
+      });
   }, []);
   useEffect(() => {
     refresh();
@@ -140,6 +148,12 @@ function App() {
     { id: "changes", name: "Changes", icon: "changes", count: unread },
     { id: "policies", name: "Privacy Watch", icon: "policy", count: 0 },
   ];
+  if (!ready)
+    return (
+      <p className="workspace-footnote" role="status">
+        Loading local monitors…
+      </p>
+    );
   return (
     <div className="app-shell">
       <a

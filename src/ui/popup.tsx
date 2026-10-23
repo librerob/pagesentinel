@@ -11,13 +11,18 @@ function Popup() {
     [tab, setTab] = useState<chrome.tabs.Tab>(),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState(false);
   useEffect(() => {
     void api<State>("state")
       .then((x) => {
         setState(x);
         appearance(x.settings);
+        setReady(true);
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => {
+        setError(e.message);
+        setReady(true);
+      });
     void chrome.tabs
       .query({ active: true, currentWindow: true })
       .then((x) => setTab(x[0]));
@@ -89,6 +94,12 @@ function Popup() {
     ["error", "warning"].includes(health(m).tone),
   ).length;
   const unread = state.monitors.reduce((n, m) => n + m.unread, 0);
+  if (!ready)
+    return (
+      <p className="popup-hint" role="status">
+        Loading local monitors…
+      </p>
+    );
   return (
     <div className="popup">
       <header>
