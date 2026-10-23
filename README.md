@@ -4,6 +4,10 @@ Local website monitoring for Chrome. Follow a page or select a price, paragraph,
 
 Free software under GPL-3.0-or-later. No accounts, subscriptions, ads, telemetry, or developer backend.
 
+![The dashboard with two synthetic monitors](docs/screenshots/dashboard-light.png)
+
+Screenshots show the actual built extension with controlled synthetic product and policy pages.
+
 **Working title:** an unrelated commercial website monitor also uses PageSentinel. This project is not affiliated with it. The name is provisional; no Chrome Web Store listing has been submitted.
 
 ## Install
@@ -70,3 +74,7 @@ npm run package
 Load `dist/` unpacked after building. The release ZIP is written to `artifacts/`. Build tools use supported WebAssembly packages so the build also works where native build binaries are blocked. `npm run dev` previews the UI; monitoring requires the built Chrome extension.
 
 Browser tests use controlled synthetic pages, a temporary extension copy with one test host pre-granted, and a fresh profile. The shipping manifest has no mandatory host access. Set `CHROMIUM_PATH` to a Chrome for Testing executable if needed. Native permission prompts and OS notification presentation need supervised checks. See [validation](docs/VALIDATION.md), [architecture](docs/ARCHITECTURE.md), [research](docs/RESEARCH.md), and [contribution guidance](CONTRIBUTING.md).
+
+## Next: v0.2.0
+
+Start with supervised daily-use reliability and permission testing. Then add Privacy Watch company groups and a shared timeline for multiple confirmed policy documents. Optional dynamic rendering should remain a separately permissioned, tested mode.

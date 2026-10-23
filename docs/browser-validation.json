@@ -1,0 +1,39 @@
+{
+  "tests": 26,
+  "report": [
+    "Manifest V3 worker and empty dashboard load",
+    "Creates selected-price monitor and verifies public HTML baseline",
+    "Monitor creation form requests existing fixture access and saves a verified monitor",
+    "Creates policy monitor with durable baseline history",
+    "Changed policy stores exact wording and produces native notification API record",
+    "Identical content creates no duplicate change event",
+    "Target price crossing alerts once and preserves subsequent price history",
+    "Missing selector visibly fails without replacing successful baseline",
+    "HTTP errors retain good baseline and apply retry backoff",
+    "Successful retry restores health",
+    "Rejects redirects, unsupported content types and oversized responses",
+    "Rejects malformed configuration and unknown messages",
+    "Paused monitor does not run when scheduler alarm fires",
+    "Actual chrome.alarms event checks due monitor and records new content",
+    "Versioned export includes history and malformed import leaves data unchanged",
+    "Import restores validated new paused copies without trusting old baselines",
+    "Background requests omit signed-in cookies",
+    "Visual picker highlights, selects unique element, cleans up and opens prefilled monitor form",
+    "Escape cancels the picker without changing the page",
+    "Denied host-access result pauses monitor and preserves its baseline",
+    "Built popup renders and handles restricted current tabs",
+    "Light, dark and true-black AMOLED render with actual source-text additions and removals",
+    "Responsive dashboard fits a 390px viewport",
+    "Browser restart preserves data and appearance, recreates alarm, and recovers interrupted lease",
+    "Acknowledgment clears unread state and deleting another monitor preserves policy history",
+    "No application runtime errors during browser scenarios"
+  ],
+  "browser": "156.0.8078.4",
+  "fixtureCreateMs": 25,
+  "fixtureRequests": 19,
+  "limitations": [
+    "Temporary manifest pre-grants synthetic host access.",
+    "Permission-denial branch is simulated.",
+    "Native permission dialog and OS notification appearance require supervised checks."
+  ]
+}

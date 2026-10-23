@@ -1,0 +1,14 @@
+{
+  "environment": "Node v24.21.0, linux/x64",
+  "fixture": "Synthetic 180-paragraph HTML with inert script noise; not a live-website or idle-CPU benchmark.",
+  "htmlBytes": 51666,
+  "textCharacters": 17708,
+  "extraction": {
+    "medianMs": 1.314,
+    "p95Ms": 2.974
+  },
+  "comparison": {
+    "medianMs": 0.463,
+    "p95Ms": 0.629
+  }
+}
