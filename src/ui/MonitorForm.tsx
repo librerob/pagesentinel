@@ -49,7 +49,17 @@ export function MonitorForm({
         throw new Error(
           "Access was denied. Nothing was saved. Allow this website to schedule checks.",
         );
-      await api("save", { config: c, id: monitor?.id });
+      const preview =
+        selection &&
+        c.selector === selection.selector &&
+        c.url === selection.url &&
+        !c.exclude &&
+        !c.ignoreText &&
+        !c.ignoreDates &&
+        !c.ignoreNumbers
+          ? selection.preview
+          : undefined;
+      await api("save", { config: c, id: monitor?.id, preview });
       saved();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save this monitor.");

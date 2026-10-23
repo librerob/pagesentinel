@@ -49,6 +49,7 @@ export interface Monitor extends Config {
   lowPrice?: number;
   currency?: string;
   notificationError?: string;
+  initialPreview?: string;
 }
 export interface Snapshot {
   id: string;

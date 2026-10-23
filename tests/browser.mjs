@@ -32,7 +32,7 @@ const updatedPolicy =
   "We may share personal information with selected advertising partners.";
 const server = createServer((req, res) => {
   requests++;
-  cookies.push(req.headers.cookie ?? "");
+  cookies.push({ url: req.url, cookie: req.headers.cookie ?? "" });
   if (req.url === "/redirect") {
     res.writeHead(302, { location: "http://elsewhere.example.com/private" });
     res.end();
@@ -311,7 +311,9 @@ try {
   ]);
   cookies = [];
   await api("retry", { id: product.id });
-  assert(cookies.every((x) => x === ""));
+  const monitorRequests = cookies.filter((x) => x.url === "/product");
+  assert.equal(monitorRequests.length, 1);
+  assert(monitorRequests.every((x) => x.cookie === ""));
   pass("Background requests omit signed-in cookies");
   const tabId = await worker.evaluate(
     async (url) => (await chrome.tabs.query({})).find((t) => t.url === url)?.id,
@@ -347,9 +349,10 @@ try {
     () => context.pages().length,
     (n) => n > 3,
   );
-  const selectedPage =
-    context.pages().find((p) => p.url().includes("#new")) ??
-    (await context.waitForEvent("page"));
+  const selectedPage = await poll(
+    async () => context.pages().find((p) => p.url().includes("#new")),
+    (x) => !!x,
+  );
   await selectedPage.getByRole("dialog").waitFor();
   assert.equal(
     await selectedPage

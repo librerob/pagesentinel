@@ -114,6 +114,11 @@ async function command(message: unknown) {
   if (msg.type === "save") {
     const c = config(msg.config);
     if (
+      msg.preview !== undefined &&
+      (typeof msg.preview !== "string" || msg.preview.length > 2000)
+    )
+      throw new Error("Invalid selection preview.");
+    if (
       !(await chrome.permissions.contains({ origins: [originPattern(c.url)] }))
     )
       throw new Error(
@@ -154,6 +159,8 @@ async function command(message: unknown) {
             id: existing?.id ?? crypto.randomUUID(),
             created: existing?.created ?? Date.now(),
           };
+    if (!m.hash && typeof msg.preview === "string")
+      m.initialPreview = msg.preview;
     await db.putMonitor(m);
     return check(m, await preferences());
   }

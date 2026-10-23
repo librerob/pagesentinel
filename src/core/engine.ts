@@ -99,6 +99,13 @@ export async function check(
       );
     }
     const text = extract(await deps.fetch(m.url), m);
+    if (!m.hash && m.initialPreview) {
+      const compact = (value: string) => value.replace(/\s+/g, " ").trim();
+      if (!compact(text).startsWith(compact(m.initialPreview)))
+        throw new Error(
+          "The selected text differs from the public HTML. This page may require JavaScript or sign-in; monitoring is not verified.",
+        );
+    }
     const hash = [
       ...new Uint8Array(
         await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)),
@@ -132,6 +139,7 @@ export async function check(
       permissionRequired: false,
       lease: 0,
       unread: m.unread + (changed && outcome.alert ? 1 : 0),
+      initialPreview: undefined,
     };
     if (outcome.price)
       m = {

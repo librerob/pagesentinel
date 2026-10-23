@@ -226,6 +226,17 @@ describe("durable check state", () => {
       notify: vi.fn(async () => {}),
     };
   });
+  it("rejects a live selection that the public HTML does not reproduce", async () => {
+    const result = await check(
+      { ...newMonitor(c), initialPreview: "Client-side price 399" },
+      defaultSettings,
+      deps,
+    );
+    expect(result.lastSuccess).toBe(0);
+    expect(result.baseline).toBe("");
+    expect(result.error).toMatch(/differs from the public HTML/);
+    expect(deps.commit).not.toHaveBeenCalled();
+  });
   it("creates a baseline, records changes once, and preserves unread until acknowledged", async () => {
     let m = await check(newMonitor(c), defaultSettings, deps);
     expect(m.lastSuccess).toBeGreaterThan(0);
