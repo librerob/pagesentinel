@@ -419,6 +419,7 @@ try {
     (await api("state")).monitors.find((m) => m.id === groupedPolicy.id).unread,
     0,
   );
+  await ui.goto(`chrome-extension://${extensionId}/dashboard.html#monitors`);
   const web = await context.newPage();
   await web.goto(`${base}/setup-redirect`);
   assert.equal(web.url(), `${base}/product`);
