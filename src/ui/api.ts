@@ -2,6 +2,7 @@ import {
   defaultSettings,
   type MonitorMetadata as Monitor,
   type Settings,
+  type Company,
 } from "../core/model";
 export async function api<T = unknown>(
   type: string,
@@ -19,8 +20,13 @@ export async function api<T = unknown>(
 export interface State {
   monitors: Monitor[];
   settings: Settings;
+  companies: Company[];
 }
-export const emptyState: State = { monitors: [], settings: defaultSettings };
+export const emptyState: State = {
+  monitors: [],
+  settings: defaultSettings,
+  companies: [],
+};
 export function appearance(settings: Settings) {
   const dark = matchMedia("(prefers-color-scheme: dark)").matches;
   document.documentElement.dataset.theme =

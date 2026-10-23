@@ -64,9 +64,9 @@ describe("untrusted configuration", () => {
       importConfigs({ version: 1, monitors: [c, { ...c, url: "file:///x" }] }),
     ).toThrow();
     expect(() => importConfigs({ version: 9, monitors: [] })).toThrow();
-    expect(() =>
+    expect(
       importConfigs({ version: 1, monitors: new Array(501).fill(c) }),
-    ).toThrow();
+    ).toHaveLength(501);
   });
 });
 describe("inert HTML extraction", () => {

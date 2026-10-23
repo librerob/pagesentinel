@@ -69,6 +69,22 @@ function Popup() {
       );
     }
   }
+  async function privacy() {
+    setBusy(true);
+    setError("");
+    try {
+      await api("discoverTab", { tabId: tab?.id });
+      open("policies");
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Could not find policies on this page.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   const attention = state.monitors.filter((m) =>
     ["error", "warning"].includes(health(m).tone),
   ).length;
@@ -120,6 +136,14 @@ function Popup() {
           Public HTML checks. Chrome asks for access only to the website you
           choose.
         </p>
+        <button
+          className="full"
+          disabled={!url || busy}
+          onClick={() => void privacy()}
+        >
+          <Icon name="policy" size={20} />
+          Privacy Watch
+        </button>
         {error && (
           <p className="error-message" role="alert">
             {error}
@@ -137,7 +161,7 @@ function Popup() {
           </p>
         )}
         <button className="text-button full" onClick={() => open()}>
-          Open dashboard
+          My Monitors
           <Icon name="arrow" size={18} />
         </button>
       </div>

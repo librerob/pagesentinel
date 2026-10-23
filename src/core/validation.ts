@@ -112,6 +112,31 @@ export function config(input: unknown): Config {
     if (typeof x[k] !== "boolean") throw new Error(`Invalid ${k}.`);
     c[k] = x[k];
   }
+  for (const k of ["companyId", "policyType", "language", "region"] as const) {
+    if (x[k] !== undefined) {
+      if (typeof x[k] !== "string" || (x[k] as string).length > 100)
+        throw new Error(`Invalid ${k}.`);
+      Object.assign(c, { [k]: (x[k] as string).trim() });
+    }
+  }
+  if (
+    c.policyType &&
+    ![
+      "privacy",
+      "terms",
+      "cookies",
+      "retention",
+      "deletion",
+      "security",
+      "other",
+    ].includes(c.policyType)
+  )
+    throw new Error("Invalid policy type.");
+  if (x.inheritInterval !== undefined) {
+    if (typeof x.inheritInterval !== "boolean")
+      throw new Error("Invalid company schedule preference.");
+    c.inheritInterval = x.inheritInterval;
+  }
   if (c.kind === "price" && (c.ignoreNumbers || c.ignoreDates))
     throw new Error("Price monitors must preserve numbers and dates.");
   return c;

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   defaults,
   type Config,
+  type Company,
   type MonitorMetadata as Monitor,
 } from "../core/model";
 import { config, originPattern } from "../core/validation";
@@ -17,12 +18,16 @@ export function MonitorForm({
   monitor,
   selection,
   policy = false,
+  companyId,
+  companies = [],
   close,
   saved,
 }: {
   monitor?: Monitor;
   selection?: Selection;
   policy?: boolean;
+  companyId?: string;
+  companies?: Company[];
   close: () => void;
   saved: () => void;
 }) {
@@ -30,6 +35,7 @@ export function MonitorForm({
     ...defaults,
     ...(monitor ?? selection ?? {}),
     kind: monitor?.kind ?? (policy ? "policy" : "text"),
+    companyId: monitor?.companyId ?? companyId,
   });
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
@@ -100,6 +106,78 @@ export function MonitorForm({
             <Icon name="close" />
           </button>
         </div>
+        {value.kind === "policy" && (
+          <details open={!!value.companyId}>
+            <summary>Company & regional document</summary>
+            <label>
+              Company
+              <select
+                value={value.companyId ?? ""}
+                onChange={(e) =>
+                  update("companyId", e.target.value || undefined)
+                }
+              >
+                <option value="">Independent document</option>
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Document type
+              <select
+                value={value.policyType ?? "other"}
+                onChange={(e) =>
+                  update("policyType", e.target.value as Config["policyType"])
+                }
+              >
+                {[
+                  "privacy",
+                  "terms",
+                  "cookies",
+                  "retention",
+                  "deletion",
+                  "security",
+                  "other",
+                ].map((t) => (
+                  <option key={t}>{t}</option>
+                ))}
+              </select>
+            </label>
+            <div className="form-grid">
+              <label>
+                Language
+                <input
+                  maxLength={100}
+                  placeholder="e.g. English"
+                  value={value.language ?? ""}
+                  onChange={(e) => update("language", e.target.value)}
+                />
+              </label>
+              <label>
+                Region
+                <input
+                  maxLength={100}
+                  placeholder="e.g. European Union"
+                  value={value.region ?? ""}
+                  onChange={(e) => update("region", e.target.value)}
+                />
+              </label>
+            </div>
+            {value.companyId && (
+              <label className="check-label">
+                <input
+                  type="checkbox"
+                  checked={value.inheritInterval !== false}
+                  onChange={(e) => update("inheritInterval", e.target.checked)}
+                />
+                Use the company’s check frequency
+              </label>
+            )}
+          </details>
+        )}
         <label>
           Website URL
           <input
@@ -278,7 +356,7 @@ export function MonitorForm({
           </>
         )}
         <details open={value.kind === "price" && !value.selector}>
-          <summary>Page section & noise controls</summary>
+          <summary>Advanced: page section & noise controls</summary>
           <label>
             CSS selector{" "}
             <span className="optional">optional for full-page text</span>

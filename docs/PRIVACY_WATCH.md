@@ -1,0 +1,15 @@
+# Privacy Watch
+
+Use the toolbar's Privacy Watch action on a public company website, or choose Add company in the dashboard. Discovery reads at most 2,000 actual links and proposes at most 80 likely documents using English, Norwegian, Spanish, German and French labels/path terms. It does not invent URLs, follow candidates, or grant access. An isolated, user-initiated activeTab script can read links already present on the current page. Dashboard discovery instead requests permission for one homepage and uses the same bounded, credential-free, redirect-rejecting fetch pipeline as monitoring.
+
+Review the candidate URLs and select documents. Each selected origin is included explicitly in Chrome's permission request. Declining access saves no company or documents. Domains are labels, never permission grants. Discovery is heuristic: irrelevant security links may be proposed, and unfamiliar labels may be missed. You can add a real policy URL manually. No curated remote company directory is used.
+
+Company documents are ordinary policy monitors with separate baselines and histories. Label language, region and policy type in monitor settings. Distinct regional URLs remain distinct; a regional redirect is a failed check, not a policy change. Company schedules apply to documents unless their settings override the frequency. Pausing a company preserves individual pause choices. Removing a document uses Delete monitor; removing a company detaches its documents and preserves their histories.
+
+The company health card shows the oldest successful check across its documents only after every document has succeeded, failures needing attention, and unread alerts. The timeline pages through 20 stored versions at a time and filters loaded versions by company, policy type, category, date, status and unread alerts. Load older versions to search further. Marking a document read acknowledges its alerts through the current time.
+
+Unique main/article landmarks narrow policy extraction, otherwise extraction retains the existing whole-page fallback. Explicit selectors and exclusions remain available. Numbers and dates are preserved by default. Before, after, inline and side-by-side views show exact normalized text. Paragraph multiset comparison distinguishes unchanged reordered paragraphs from changed wording. Categories are local keyword matches in modified paragraphs, never risk scores or legal findings. Summaries remain conservative and always link back to exact evidence.
+
+Notifications use stable persisted change IDs. Inbox/history commits happen before native notification requests. A crash between those operations can prevent the OS request, but cannot erase the recorded change. Identical checks do not create duplicate versions; there is no claim of exactly-once OS delivery. Monitor muting preserves unread alerts.
+
+The previous 500-monitor count cap is removed. The response, text, scheduling, import-byte and 50 MiB storage budgets remain safety limits. Large collections can become visibly overdue; unlimited paid tiers or guaranteed throughput are not implied.

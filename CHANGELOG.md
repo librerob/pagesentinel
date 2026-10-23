@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add local Privacy Watch company profiles, policy-link review, grouped document controls, regional labels and a paginated unified timeline.
+- Add Overview, skippable persisted onboarding and contextual advanced controls; preserve existing monitor management and themes.
+- Add side-by-side comparisons and deterministic evidence categories, including a separate explanation for paragraph reordering.
+- Remove the fixed 500-monitor configuration cap while retaining bounded scheduling and byte budgets.
+
 - Canonicalize trailing DNS dots before validation and origin grants; reject additional local suffixes and malformed DNS labels, with international-domain and alternate-IP regression tests.
 
 - Keep redirects blocked before destination contact; explain final-page recovery and verify popup/picker setup uses the final tab URL.

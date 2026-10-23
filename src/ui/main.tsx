@@ -11,10 +11,12 @@ import { api, appearance, emptyState, relative, when, type State } from "./api";
 import { Icon, Logo } from "./icons";
 import { MonitorForm, type Selection } from "./MonitorForm";
 import { History } from "./History";
+import { PrivacyWatch, ChangeTimeline } from "./PrivacyWatch";
+import { Onboarding, Overview } from "./Welcome";
 import "./theme.css";
 function App() {
   const [state, setState] = useState<State>(emptyState),
-    [route, setRoute] = useState(location.hash.slice(1) || "monitors");
+    [route, setRoute] = useState(location.hash.slice(1) || "overview");
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(""),
     [filter, setFilter] = useState("all"),
@@ -23,6 +25,7 @@ function App() {
     monitor?: Monitor;
     selection?: Selection;
     policy?: boolean;
+    companyId?: string;
   } | null>(null);
   const [, tick] = useState(0);
   const refresh = useCallback(() => {
@@ -39,7 +42,7 @@ function App() {
     return () => clearInterval(timer);
   }, [refresh]);
   useEffect(() => {
-    const change = () => setRoute(location.hash.slice(1) || "monitors");
+    const change = () => setRoute(location.hash.slice(1) || "overview");
     addEventListener("hashchange", change);
     return () => removeEventListener("hashchange", change);
   }, []);
@@ -115,17 +118,22 @@ function App() {
     }
   }
   const nav = [
+    { id: "overview", name: "Overview", icon: "monitor", count: 0 },
     {
       id: "monitors",
-      name: "Monitors",
+      name: "My Monitors",
       icon: "monitor",
       count: state.monitors.length,
     },
     { id: "changes", name: "Changes", icon: "changes", count: unread },
-    { id: "policies", name: "Policy watch", icon: "policy", count: 0 },
+    { id: "policies", name: "Privacy Watch", icon: "policy", count: 0 },
   ];
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
+      <Onboarding start={() => setForm({})} />
       <aside className="navigation">
         <a className="brand" href="#monitors">
           <Logo />
@@ -171,13 +179,13 @@ function App() {
           </div>
         </div>
       </aside>
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <header className="topbar">
           <span>
             {selected
               ? "Monitors / Monitor details"
               : route === "policies"
-                ? "Policy watch"
+                ? "Privacy Watch"
                 : route === "settings"
                   ? "Preferences"
                   : route === "about"
@@ -361,6 +369,34 @@ function App() {
             />
           ) : route === "about" ? (
             <About />
+          ) : route === "policies" ? (
+            <PrivacyWatch
+              companies={state.companies}
+              monitors={state.monitors}
+              refresh={refresh}
+              onError={setError}
+              addDocument={(companyId) => setForm({ policy: true, companyId })}
+            />
+          ) : route === "overview" ? (
+            <Overview monitors={state.monitors} start={() => setForm({})} />
+          ) : route === "changes" ? (
+            <>
+              <div className="page-heading">
+                <div>
+                  <p className="eyebrow">THE LATEST FROM YOUR PAGES</p>
+                  <h1>See what’s changed.</h1>
+                  <p className="subtitle">
+                    Actual recorded versions across your monitors.
+                  </p>
+                </div>
+              </div>
+              <ChangeTimeline
+                monitors={state.monitors}
+                companies={state.companies}
+                refresh={refresh}
+                onError={setError}
+              />
+            </>
           ) : (
             <>
               <div className="page-heading">
@@ -567,6 +603,7 @@ function App() {
       {form && (
         <MonitorForm
           {...form}
+          companies={state.companies}
           close={closeForm}
           saved={() => {
             closeForm();

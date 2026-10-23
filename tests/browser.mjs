@@ -60,7 +60,7 @@ const server = createServer((req, res) => {
   }
   res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
   res.end(
-    `<!doctype html><html><head><title>${req.url === "/privacy" ? "Northstar privacy policy" : "Aster running shoes"}</title><style>body{font:18px system-ui;max-width:760px;margin:80px auto;color:#17362c}button{padding:12px}#price{font-size:32px}</style></head><body><main><h1>${req.url === "/privacy" ? "Northstar privacy policy" : "Aster running shoes"}</h1>${req.url === "/privacy" ? `<p>${policyVersion ? updatedPolicy : initialPolicy}</p><p>We retain account records for ${policyVersion ? 90 : 30} days.</p><p>You can request a copy of your data at any time.</p>` : `<p>Lightweight everyday running shoes.</p>${state === "missing" ? "" : `<p id="price">€${productPrice}</p>`}<p>In stock</p><button id="buy">Add to basket</button>`}</main><script>window.fixtureScriptRan=true</script></body></html>`,
+    `<!doctype html><html><head><title>${req.url === "/privacy" ? "Northstar privacy policy" : "Aster running shoes"}</title><style>body{font:18px system-ui;max-width:760px;margin:80px auto;color:#17362c}button{padding:12px}#price{font-size:32px}</style></head><body><main><h1>${req.url === "/privacy" ? "Northstar privacy policy" : "Aster running shoes"}</h1>${req.url === "/privacy" ? `<p>${policyVersion ? updatedPolicy : initialPolicy}</p><p>We retain account records for ${policyVersion > 1 ? 180 : policyVersion ? 90 : 30} days.</p><p>You can request a copy of your data at any time.</p>` : `<p>Lightweight everyday running shoes.</p>${state === "missing" ? "" : `<p id="price">€${productPrice}</p>`}<p>In stock</p><button id="buy">Add to basket</button>`}</main><footer><a href="/privacy">Privacy Policy</a> <a href="/terms">Terms of Service</a></footer><script>window.fixtureScriptRan=true</script></body></html>`,
   );
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -96,7 +96,22 @@ async function launch() {
   extensionId = new URL(worker.url()).host;
   ui = await context.newPage();
   ui.on("pageerror", (e) => runtimeErrors.push(e.message));
-  await ui.goto(`chrome-extension://${extensionId}/dashboard.html`);
+  await ui.goto(`chrome-extension://${extensionId}/dashboard.html#monitors`);
+  if (
+    !(await ui.evaluate(
+      async () =>
+        (await chrome.storage.local.get("onboardingComplete"))
+          .onboardingComplete,
+    ))
+  ) {
+    await ui
+      .getByRole("heading", { name: "Your pages, kept in view." })
+      .waitFor();
+    await ui.screenshot({
+      path: path.join(screenshots, "onboarding-light.png"),
+    });
+    await ui.getByRole("button", { name: "Skip for now" }).click();
+  }
   await ui.getByRole("heading", { name: "Your pages, in view." }).waitFor();
 }
 async function api(type, rest = {}) {
@@ -204,7 +219,11 @@ try {
   let notifications = await worker.evaluate(() =>
     chrome.notifications.getAll(),
   );
-  assert(Object.hasOwn(notifications, policy.id));
+  assert(
+    Object.keys(notifications).some((id) =>
+      id.startsWith(`change:${policy.id}:`),
+    ),
+  );
   pass(
     "Changed policy stores exact wording and produces native notification API record",
   );
@@ -322,6 +341,85 @@ try {
   pass(
     "Import restores validated new paused copies without trusting old baselines",
   );
+  await ui.goto(`chrome-extension://${extensionId}/dashboard.html#policies`);
+  await ui.getByRole("button", { name: "Add company", exact: true }).click();
+  await ui.getByLabel("Company name", { exact: true }).fill("Northstar");
+  await ui
+    .getByLabel("Company website", { exact: true })
+    .fill(`${base}/product`);
+  await ui
+    .getByRole("button", { name: "Find privacy and legal policies" })
+    .click();
+  await ui
+    .getByRole("group", { name: "Choose documents to monitor" })
+    .waitFor();
+  await ui.getByRole("checkbox", { name: "Privacy Policy" }).check();
+  await ui.getByRole("checkbox", { name: "Terms of Service" }).check();
+  await ui.getByText("Advanced company settings", { exact: true }).click();
+  await ui.getByLabel("Shared check frequency").selectOption("0");
+  await ui.getByRole("button", { name: "Save company & 2 documents" }).click();
+  await ui.getByRole("dialog").waitFor({ state: "hidden" });
+  const company = (await api("state")).companies.find(
+    (c) => c.name === "Northstar",
+  );
+  assert(company);
+  const documents = (await api("state")).monitors.filter(
+    (m) => m.companyId === company.id,
+  );
+  assert.equal(documents.length, 2);
+  for (const document of documents) await api("retry", { id: document.id });
+  pass(
+    "Company setup discovers actual links, confirms documents and saves a grouped watch through the UI",
+  );
+  await api("companySave", {
+    id: company.id,
+    company: { ...company, paused: true },
+    documents: [],
+  });
+  assert(
+    (await api("state")).monitors
+      .filter((m) => m.companyId === company.id)
+      .every((m) => m.companyPaused),
+  );
+  await api("companySave", {
+    id: company.id,
+    company: { ...company, paused: false },
+    documents: [],
+  });
+  policyVersion = 2;
+  const groupedPolicy = documents.find((m) => m.policyType === "privacy");
+  await api("retry", { id: groupedPolicy.id });
+  const groupHistory = await api("history", { id: groupedPolicy.id });
+  assert(groupHistory[0].after.includes("180 days"));
+  assert(groupHistory[0].before.includes("90 days"));
+  await ui.reload();
+  await ui
+    .getByRole("heading", { name: "Privacy Watch", exact: true })
+    .waitFor();
+  await ui.getByRole("heading", { name: "Northstar", exact: true }).waitFor();
+  await ui
+    .getByText("Retention wording changed. Review the exact passages.", {
+      exact: true,
+    })
+    .waitFor();
+  await ui.screenshot({
+    path: path.join(screenshots, "privacy-watch-light.png"),
+    fullPage: true,
+  });
+  await ui.getByText("Show the exact change", { exact: true }).last().click();
+  await ui.screenshot({
+    path: path.join(screenshots, "privacy-timeline-light.png"),
+    fullPage: true,
+  });
+  pass(
+    "Company pause/resume preserves documents and unified timeline shows exact 90-to-180-day retention evidence",
+  );
+  await api("read", { id: groupedPolicy.id });
+  assert.equal(
+    (await api("state")).monitors.find((m) => m.id === groupedPolicy.id).unread,
+    0,
+  );
+  await ui.goto(`chrome-extension://${extensionId}/dashboard.html#monitors`);
   const web = await context.newPage();
   await web.goto(`${base}/setup-redirect`);
   assert.equal(web.url(), `${base}/product`);
@@ -420,7 +518,7 @@ try {
   await api("resume", { id: product.id });
   const popup = await context.newPage();
   await popup.goto(`chrome-extension://${extensionId}/popup.html`);
-  await popup.getByRole("button", { name: "Open dashboard" }).waitFor();
+  await popup.getByRole("button", { name: "My Monitors" }).waitFor();
   await popup.setViewportSize({ width: 356, height: 570 });
   await popup.screenshot({ path: path.join(screenshots, "popup-light.png") });
   pass("Built popup renders and handles restricted current tabs");
@@ -504,6 +602,15 @@ try {
   await context.close();
   await launch();
   const persisted = await api("export");
+  assert(persisted.companies.some((c) => c.id === company.id));
+  assert.equal(
+    await ui.evaluate(
+      async () =>
+        (await chrome.storage.local.get("onboardingComplete"))
+          .onboardingComplete,
+    ),
+    true,
+  );
   assert.equal(persisted.settings.theme, "dark");
   assert.equal(persisted.settings.accent, "violet");
   assert(

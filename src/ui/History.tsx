@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import type { MonitorMetadata as Monitor, Snapshot } from "../core/model";
-import { policyEvidence, wordDiff } from "../core/compare";
+import {
+  paragraphChanges,
+  policyEvidence,
+  policySummary,
+  wordDiff,
+} from "../core/compare";
 import { api, when } from "./api";
 import { Icon } from "./icons";
 export function History({
@@ -101,7 +106,7 @@ export function History({
                   <small>{when(chosen.time)}</small>
                 </div>
                 <div className="segmented" aria-label="Comparison view">
-                  {["diff", "before", "after"].map((x) => (
+                  {["diff", "side", "before", "after"].map((x) => (
                     <button
                       key={x}
                       aria-pressed={mode === x}
@@ -109,13 +114,36 @@ export function History({
                     >
                       {x === "diff"
                         ? "Changes"
-                        : x === "before"
-                          ? "Before"
-                          : "After"}
+                        : x === "side"
+                          ? "Side by side"
+                          : x === "before"
+                            ? "Before"
+                            : "After"}
                     </button>
                   ))}
                 </div>
               </div>
+              {!chosen.initial && monitor.kind === "policy" && (
+                <div className="info-box">
+                  <p>
+                    {policySummary(chosen.before, chosen.after)[0] ??
+                      "Policy text changed. Review the highlighted passages."}
+                    <small>
+                      {
+                        paragraphChanges(chosen.before, chosen.after).added
+                          .length
+                      }{" "}
+                      added paragraphs ·{" "}
+                      {
+                        paragraphChanges(chosen.before, chosen.after).removed
+                          .length
+                      }{" "}
+                      removed paragraphs. Categories are keyword matches, not a
+                      legal assessment.
+                    </small>
+                  </p>
+                </div>
+              )}
               {!chosen.initial && mode === "diff" && (
                 <p className="diff-key">
                   <span className="added-key">Added</span>
@@ -148,19 +176,48 @@ export function History({
                 </details>
               )}
               <div className="diff-content" aria-label="Recorded page text">
-                {mode === "before"
-                  ? chosen.before || "No earlier baseline."
-                  : mode === "after" || chosen.initial
-                    ? chosen.after
-                    : wordDiff(chosen.before, chosen.after).map((part, i) =>
-                        part.added ? (
-                          <ins key={i}>{part.value}</ins>
-                        ) : part.removed ? (
-                          <del key={i}>{part.value}</del>
-                        ) : (
-                          <span key={i}>{part.value}</span>
-                        ),
-                      )}
+                {mode === "side" ? (
+                  <div className="side-by-side">
+                    <section>
+                      <h3>Before</h3>
+                      {wordDiff(chosen.before, chosen.after)
+                        .filter((p) => !p.added)
+                        .map((p, i) =>
+                          p.removed ? (
+                            <del key={i}>{p.value}</del>
+                          ) : (
+                            <span key={i}>{p.value}</span>
+                          ),
+                        )}
+                    </section>
+                    <section>
+                      <h3>After</h3>
+                      {wordDiff(chosen.before, chosen.after)
+                        .filter((p) => !p.removed)
+                        .map((p, i) =>
+                          p.added ? (
+                            <ins key={i}>{p.value}</ins>
+                          ) : (
+                            <span key={i}>{p.value}</span>
+                          ),
+                        )}
+                    </section>
+                  </div>
+                ) : mode === "before" ? (
+                  chosen.before || "No earlier baseline."
+                ) : mode === "after" || chosen.initial ? (
+                  chosen.after
+                ) : (
+                  wordDiff(chosen.before, chosen.after).map((part, i) =>
+                    part.added ? (
+                      <ins key={i}>{part.value}</ins>
+                    ) : part.removed ? (
+                      <del key={i}>{part.value}</del>
+                    ) : (
+                      <span key={i}>{part.value}</span>
+                    ),
+                  )
+                )}
               </div>
               <p className="note comparison-footer">
                 Text captured from the public HTML. Formatting is normalized;
