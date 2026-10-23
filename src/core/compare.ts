@@ -8,11 +8,13 @@ export function price(
   text: string,
   decimal: Config["decimal"] = "auto",
 ): Price {
-  const currencies = [
-    ...new Set(text.match(/EUR|USD|GBP|CAD|AUD|JPY|CHF|€|£|\$|¥/g) ?? []),
-  ];
+  const currencies =
+    text.match(
+      /(?<!\p{L})(?:EUR|USD|GBP|CAD|AUD|JPY|CHF|NOK|SEK|DKK|PLN|CZK|INR|BRL|MXN|NZD|SGD|HKD|KRW|CNY|kr\.?)(?!\p{L})|[€£$¥]/gu,
+    ) ?? [];
+  const amountText = text.replace(/(\d),-(?=\s|$|[A-Za-z])/g, "$1,00");
   const tokens =
-    text
+    amountText
       .match(/\d(?:[\d.,\u00a0 ]*\d)?/g)
       ?.map((x) => x.trim())
       .filter(Boolean) ?? [];
@@ -57,7 +59,10 @@ export function price(
   const number = Number(value);
   if (!Number.isFinite(number) || number < 0)
     throw new Error("Could not read a valid price.");
-  return { value: number, currency: currencies[0] };
+  return {
+    value: number,
+    currency: currencies[0] === "kr." ? "kr" : currencies[0],
+  };
 }
 export function occurrences(text: string, phrase: string) {
   return text.toLocaleLowerCase().split(phrase.toLocaleLowerCase()).length - 1;

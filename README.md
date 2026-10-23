@@ -30,6 +30,7 @@ Allow access to the selected website when Chrome asks. The first background chec
 - Exact text comparisons, local version history, unread changes, and native notification requests.
 - Dedicated policy monitors, before/after text, and relevant changed-paragraph keyword highlights.
 - Price decreases, increases, new lows, and threshold crossings. Ambiguous numeric formats fail visibly.
+- Price labels include NOK, SEK, DKK, PLN, CZK, INR, BRL, MXN, NZD, SGD, HKD, KRW, CNY and bare `kr`/`kr.`; labelled prices can use the trailing `,-` zero-decimal convention.
 - Case-insensitive phrase appearance, disappearance, or count changes, including availability phrases.
 - Optional exclusions, exact ignored phrases, ISO timestamp suppression, numeric suppression, and text-change thresholds.
 - Text and policy thresholds accumulate edits against the last alert (or initial baseline); small successive edits no longer disappear through baseline drift.
@@ -51,6 +52,8 @@ Host access is optional and requested per selected origin. No broad mandatory we
 Monitored websites receive ordinary requests from your network address. No monitoring data is sent to a developer-controlled backend. Checks omit credentials and referrers, reject embedded URL credentials and redirects, and do not reproduce a signed-in session. See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
 
 ## Boundaries
+
+Prices require exactly one explicit currency label. Bare `kr` is kept as `kr`, not guessed as NOK/SEK/DKK. A bare amount such as `1.299,-` still fails because it has no currency; `kr 1.299,-` is supported. Ambiguous decimal/thousands separators require an explicit decimal choice.
 
 Redirects remain rejected by design to prevent unapproved-host contact, including private addresses. Open a redirecting URL in your browser, then paste its final address or use **Monitor this page** / **Select an element** from the final page. Both setup flows save Chrome's current final tab URL.
 
