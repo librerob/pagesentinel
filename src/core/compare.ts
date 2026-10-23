@@ -1,5 +1,6 @@
 import { diffWordsWithSpace, diffArrays } from "diff";
 import type { Config, Monitor } from "./model";
+import { newItems } from "./items";
 export interface Price {
   value: number;
   currency: string;
@@ -89,10 +90,16 @@ export function evaluate(
             : p.value < (m.lowPrice ?? previous));
     return { alert, price: p };
   }
-  if (!m.hash) return { alert: false };
+  if (!m.hash) {
+    if (m.kind === "availability") availabilityState(next, m.phrase);
+    return { alert: false };
+  }
+  if (m.kind === "items")
+    return { alert: newItems(m.baseline, next).length > 0 };
   if (m.kind === "keyword" || m.kind === "availability") {
-    const before = occurrences(m.baseline, m.phrase),
-      after = occurrences(next, m.phrase);
+    const count = m.kind === "availability" ? availabilityState : occurrences;
+    const before = count(m.baseline, m.phrase),
+      after = count(next, m.phrase);
     return {
       alert:
         m.condition === "appears"
@@ -113,6 +120,16 @@ export function evaluate(
       (100 * changed) / Math.max(reference.length, next.length, 1) >=
         m.threshold,
   };
+}
+export function availabilityState(text: string, phrase: string): number {
+  const normalized = text.trim().replace(/\s+/g, " ").toLocaleLowerCase(),
+    expected = phrase.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+  if (normalized === expected) return 1;
+  if (normalized.includes(expected))
+    throw new Error(
+      "Availability wording is ambiguous. Select the exact stock message and use its full phrase; unrelated or negated text must not trigger an alert.",
+    );
+  return 0;
 }
 export function wordDiff(before: string, after: string) {
   return (
@@ -186,8 +203,10 @@ export function paragraphChanges(before: string, after: string) {
       return true;
     });
   };
-  const commonA = a.filter((x) => b.includes(x)),
-    commonB = b.filter((x) => a.includes(x));
+  const setA = new Set(a),
+    setB = new Set(b);
+  const commonA = a.filter((x) => setB.has(x)),
+    commonB = b.filter((x) => setA.has(x));
   return {
     added: unmatched(b, a),
     removed: unmatched(a, b),

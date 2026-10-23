@@ -1,10 +1,12 @@
 // Controlled fixture pages only. The production code and URL validator are unchanged.
 import { chromium } from "playwright";
+import AxeBuilder from "@axe-core/playwright";
 import { createServer } from "node:http";
 import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 const root = process.cwd();
 const temp = await mkdtemp(path.join(tmpdir(), "pagesentinel-test-"));
 const extension = path.join(temp, "extension"),
@@ -80,7 +82,28 @@ if (process.env.CHROMIUM_PATH)
   options.executablePath = process.env.CHROMIUM_PATH;
 let context, worker, ui, extensionId;
 const report = [],
-  runtimeErrors = [];
+  runtimeErrors = [],
+  accessibility = [];
+async function audit(page, label) {
+  const result = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+    .analyze();
+  accessibility.push({ label, violations: result.violations });
+  await mkdir("test-results", { recursive: true });
+  await writeFile(
+    "test-results/accessibility.json",
+    JSON.stringify(accessibility, null, 2),
+  );
+  assert.deepEqual(
+    result.violations.map((v) => ({
+      id: v.id,
+      impact: v.impact,
+      nodes: v.nodes.map((n) => n.target),
+    })),
+    [],
+    `Accessibility violations: ${label}`,
+  );
+}
 const pass = (name) => {
   report.push(name);
   console.log(`PASS ${name}`);
@@ -110,6 +133,7 @@ async function launch() {
     await ui.screenshot({
       path: path.join(screenshots, "onboarding-light.png"),
     });
+    await audit(ui, "First-run onboarding");
     await ui.getByRole("button", { name: "Skip for now" }).click();
   }
   await ui.getByRole("heading", { name: "Your pages, in view." }).waitFor();
@@ -186,6 +210,9 @@ try {
   await ui
     .getByLabel("Website URL", { exact: true })
     .fill(`${base}/announcements`);
+  await audit(ui, "Monitor creation dialog");
+  await ui.keyboard.press("Tab");
+  assert(await ui.evaluate(() => !!document.activeElement?.closest("dialog")));
   await ui.getByLabel("Name", { exact: true }).fill("Release announcements");
   await ui.getByRole("button", { name: "Allow & start monitoring" }).click();
   await ui.getByRole("dialog").waitFor({ state: "hidden" });
@@ -406,7 +433,10 @@ try {
     path: path.join(screenshots, "privacy-watch-light.png"),
     fullPage: true,
   });
-  await ui.getByText("Show the exact change", { exact: true }).last().click();
+  await ui.getByText("Monitored documents (2)", { exact: true }).click();
+  await audit(ui, "Privacy Watch and company documents");
+  await ui.getByText("Show the exact change", { exact: true }).first().click();
+  await ui.evaluate(() => globalThis.scrollTo(0, 0));
   await ui.screenshot({
     path: path.join(screenshots, "privacy-timeline-light.png"),
     fullPage: true,
@@ -521,6 +551,7 @@ try {
   await popup.getByRole("button", { name: "My Monitors" }).waitFor();
   await popup.setViewportSize({ width: 356, height: 570 });
   await popup.screenshot({ path: path.join(screenshots, "popup-light.png") });
+  await audit(popup, "Popup");
   pass("Built popup renders and handles restricted current tabs");
   await popup.close();
   for (const theme of ["light", "dark", "amoled"]) {
@@ -546,6 +577,7 @@ try {
     await ui.screenshot({
       path: path.join(screenshots, `dashboard-${theme}.png`),
     });
+    await audit(ui, `Monitor dashboard ${theme}`);
     await ui.goto(
       `chrome-extension://${extensionId}/dashboard.html#monitor/${policy.id}`,
     );
@@ -572,12 +604,30 @@ try {
       path: path.join(screenshots, `policy-${theme}.png`),
       fullPage: true,
     });
+    await audit(ui, `Policy comparison ${theme}`);
+    await ui.getByRole("button", { name: "Side by side", exact: true }).click();
+    await ui.evaluate(() => globalThis.scrollTo(0, 0));
+    await ui.screenshot({
+      path: path.join(screenshots, `policy-side-${theme}.png`),
+      fullPage: true,
+    });
+    await ui.goto(`chrome-extension://${extensionId}/dashboard.html#policies`);
+    await ui
+      .getByRole("heading", { name: "Privacy Watch", exact: true })
+      .waitFor();
+    await ui.evaluate(() => globalThis.scrollTo(0, 0));
+    await audit(ui, `Privacy Watch ${theme}`);
+    await ui.screenshot({
+      path: path.join(screenshots, `privacy-watch-${theme}.png`),
+      fullPage: true,
+    });
     await ui.goto(`chrome-extension://${extensionId}/dashboard.html`);
   }
   pass(
     "Light, dark and true-black AMOLED render with actual source-text additions and removals",
   );
   await ui.setViewportSize({ width: 390, height: 844 });
+  await audit(ui, "Overview at 390px");
   await ui.screenshot({
     path: path.join(screenshots, "dashboard-mobile.png"),
     fullPage: true,
@@ -590,7 +640,74 @@ try {
   await ui.setViewportSize({ width: 1440, height: 960 });
   await ui.goto(`chrome-extension://${extensionId}/dashboard.html#settings`);
   await ui.getByRole("heading", { name: "Settings", exact: true }).waitFor();
+  await audit(ui, "Settings and privacy controls");
   await ui.screenshot({ path: path.join(screenshots, "settings-amoled.png") });
+  await ui
+    .getByLabel("Backup passphrase", { exact: true })
+    .fill("A unique browser backup passphrase");
+  await ui
+    .getByLabel("Confirm passphrase for export", { exact: true })
+    .fill("A unique browser backup passphrase");
+  const downloaded = ui.waitForEvent("download");
+  await ui.getByRole("button", { name: "Export backup", exact: true }).click();
+  const encryptedDownload = await downloaded;
+  const encryptedData = JSON.parse(
+    await readFile(await encryptedDownload.path(), "utf8"),
+  );
+  assert.equal(encryptedData.format, "pagesentinel-encrypted");
+  assert(!JSON.stringify(encryptedData).includes("Northstar"));
+  assert.equal(
+    await ui.getByLabel("Backup passphrase", { exact: true }).inputValue(),
+    "",
+  );
+  await ui
+    .getByLabel("Backup passphrase", { exact: true })
+    .fill("A unique browser backup passphrase");
+  const beforeImport = (await api("state")).monitors.length;
+  ui.once("dialog", (dialog) => dialog.accept());
+  await ui.locator('input[type="file"]').setInputFiles({
+    name: "backup.encrypted.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(encryptedData)),
+  });
+  await ui
+    .getByText(
+      "Import processed. Imported monitors are paused until you grant access.",
+      { exact: true },
+    )
+    .waitFor();
+  assert.equal((await api("state")).monitors.length, beforeImport * 2);
+  const importedNow = (await api("state")).monitors.filter(
+    (m) => m.permissionRequired,
+  );
+  for (const m of importedNow) await api("delete", { id: m.id });
+  for (const c of (await api("state")).companies.filter(
+    (c) => c.id !== company.id,
+  ))
+    await api("companyDelete", { id: c.id });
+  pass(
+    "Encrypted backup downloads without plaintext, clears passphrase and imports fresh paused company/monitor copies",
+  );
+  const cdp = await context.newCDPSession(ui);
+  const targets = await cdp.send("Target.getTargets");
+  const workerTarget = targets.targetInfos.find(
+    (t) => t.type === "service_worker" && t.url === worker.url(),
+  );
+  assert(workerTarget);
+  const restarted = context.waitForEvent("serviceworker", { timeout: 15000 });
+  await cdp.send("Target.closeTarget", { targetId: workerTarget.targetId });
+  const afterWorkerRestart = await api("export");
+  worker = await restarted;
+  assert(
+    afterWorkerRestart.monitors
+      .find((m) => m.id === policy.id)
+      .baseline.includes(updatedPolicy),
+  );
+  assert(afterWorkerRestart.companies.some((c) => c.id === company.id));
+  await cdp.detach();
+  pass(
+    "Terminating the MV3 worker preserves baselines and company state when a message restarts it",
+  );
   await api("settings", {
     settings: { ...prefs, theme: "dark", accent: "violet" },
   });
@@ -638,6 +755,9 @@ try {
   );
   assert.deepEqual(runtimeErrors, []);
   pass("No application runtime errors during browser scenarios");
+  pass(
+    `${accessibility.length} automated WCAG-tagged axe scans found no violations; keyboard focus stays inside the creation dialog`,
+  );
   await mkdir("test-results", { recursive: true });
   await writeFile(
     "test-results/browser.json",

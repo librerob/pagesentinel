@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Prepare v0.2.0 preview packaging with encrypted backup export/import, fresh paused company copies, bulk management, guided selector repair, snoozing, specific health explanations and website-grant controls.
+- Add stable-link new-item detection and conservative complete-message availability matching; invalid or ambiguous content retains the previous good baseline.
+- Add automated axe accessibility scans and Chromium scenarios for backup round trips and service-worker termination. Results are recorded by CI rather than assumed from compilation.
+
 - Add local Privacy Watch company profiles, policy-link review, grouped document controls, regional labels and a paginated unified timeline.
 - Add Overview, skippable persisted onboarding and contextual advanced controls; preserve existing monitor management and themes.
 - Add side-by-side comparisons and deterministic evidence categories, including a separate explanation for paragraph reordering.

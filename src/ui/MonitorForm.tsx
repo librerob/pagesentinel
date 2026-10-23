@@ -13,6 +13,7 @@ export interface Selection {
   title: string;
   selector: string;
   preview: string;
+  repairId?: string;
 }
 export function MonitorForm({
   monitor,
@@ -33,7 +34,9 @@ export function MonitorForm({
 }) {
   const [value, setValue] = useState<Config>({
     ...defaults,
-    ...(monitor ?? selection ?? {}),
+    ...(monitor ?? {}),
+    ...(selection ?? {}),
+    title: monitor?.title ?? selection?.title ?? "",
     kind: monitor?.kind ?? (policy ? "policy" : "text"),
     companyId: monitor?.companyId ?? companyId,
   });
@@ -61,6 +64,7 @@ export function MonitorForm({
         );
       const preview =
         selection &&
+        c.kind !== "items" &&
         c.selector === selection.selector &&
         c.url === selection.url &&
         !c.exclude &&
@@ -223,6 +227,7 @@ export function MonitorForm({
               <option value="price">Price changes</option>
               <option value="keyword">Word or phrase</option>
               <option value="availability">Availability phrase</option>
+              <option value="items">New items in a list</option>
             </select>
           </label>
           <label>
@@ -355,18 +360,38 @@ export function MonitorForm({
             </p>
           </>
         )}
-        <details open={value.kind === "price" && !value.selector}>
+        <details
+          open={
+            (value.kind === "price" || value.kind === "items") &&
+            !value.selector
+          }
+        >
           <summary>Advanced: page section & noise controls</summary>
           <label>
             CSS selector{" "}
             <span className="optional">optional for full-page text</span>
             <input
               value={value.selector}
-              required={value.kind === "price"}
+              required={value.kind === "price" || value.kind === "items"}
               placeholder="Whole page, or e.g. #product-price"
               onChange={(e) => update("selector", e.target.value)}
             />
           </label>
+          {value.kind === "items" && (
+            <label>
+              List item selector
+              <input
+                placeholder="a[href]"
+                value={value.itemSelector ?? ""}
+                onChange={(e) => update("itemSelector", e.target.value)}
+              />
+              <small>
+                One stable public link per entry. Reordering and label edits do
+                not alert; new link URLs do. Changing tracking parameters may
+                look like new entries.
+              </small>
+            </label>
+          )}
           <label>
             Exclude elements
             <input

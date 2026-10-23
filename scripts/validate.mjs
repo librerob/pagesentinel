@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 const manifest = JSON.parse(await readFile("dist/manifest.json", "utf8"));
 assert.equal(manifest.manifest_version, 3);
-assert.equal(manifest.version, "0.1.0");
+assert.equal(
+  manifest.version,
+  JSON.parse(await readFile("package.json", "utf8")).version,
+);
 assert.equal(manifest.minimum_chrome_version, "120");
 assert.equal(manifest.host_permissions, undefined);
 assert.equal(manifest.externally_connectable, undefined);

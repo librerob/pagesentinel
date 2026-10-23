@@ -390,20 +390,48 @@ export async function pruneHistory(id: string, retention: number) {
   });
 }
 export async function removeMonitor(id: string) {
+  return removeMonitors([id]);
+}
+export async function removeMonitors(ids: string[]) {
   await write(
     ["monitors", "texts", "snapshots", "snapshotMetadata"],
     async (tx, usage) => {
       const store = tx.objectStore("monitors"),
-        old = await request<StoredMonitor | undefined>(store.get(id));
-      if (!old) return;
-      await trim(tx, usage, id, 0);
-      usage.bytes -= old.recordBytes;
-      usage.bytes += commaDelta(usage.monitors, usage.monitors - 1);
-      usage.monitors--;
-      store.delete(id);
-      tx.objectStore("texts").delete(id);
+        records = await Promise.all(
+          ids.map((id) => request<StoredMonitor | undefined>(store.get(id))),
+        );
+      for (const old of records) {
+        if (!old) continue;
+        const id = old.id;
+        await trim(tx, usage, id, 0);
+        usage.bytes -= old.recordBytes;
+        usage.bytes += commaDelta(usage.monitors, usage.monitors - 1);
+        usage.monitors--;
+        store.delete(id);
+        tx.objectStore("texts").delete(id);
+      }
     },
   );
+}
+export async function updateMany(items: MonitorMetadata[]) {
+  await write(["monitors"], async (tx, usage) => {
+    const store = tx.objectStore("monitors");
+    for (const metadata of items) {
+      const old = await request<StoredMonitor | undefined>(
+        store.get(metadata.id),
+      );
+      if (!old)
+        throw new Error(
+          "A selected monitor was removed. Reload and try again.",
+        );
+      const bytes =
+        old.recordBytes -
+        recordBytes(publicMetadata(old)) +
+        recordBytes(metadata);
+      usage.bytes += bytes - old.recordBytes;
+      store.put({ ...metadata, recordBytes: bytes });
+    }
+  });
 }
 export async function clearHistory(id?: string) {
   await write(
@@ -428,8 +456,15 @@ export async function clearHistory(id?: string) {
     },
   );
 }
-export async function addImported(items: Monitor[]) {
-  await write(["monitors", "texts"], async (tx, usage) => {
+export async function addImported(items: Monitor[], groups: Company[] = []) {
+  await write(["monitors", "texts", "companies"], async (tx, usage) => {
+    const store = tx.objectStore("companies");
+    for (const group of groups) {
+      const count = usage.companies ?? 0;
+      usage.bytes += recordBytes(group) + (count ? 1 : 2);
+      usage.companies = count + 1;
+      store.add(group);
+    }
     for (const item of items) await setMonitor(tx, usage, item, true);
     if (usage.bytes > MAX_STORAGE) throw new Error(budgetError);
   });

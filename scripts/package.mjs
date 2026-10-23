@@ -18,7 +18,11 @@ async function walk(dir, prefix = "") {
 await walk("dist");
 await mkdir("artifacts", { recursive: true });
 const zip = zipSync(files, { level: 9 });
-await writeFile("artifacts/pagesentinel-0.1.0.zip", zip);
+const { version } = JSON.parse(await readFile("dist/manifest.json", "utf8"));
+await writeFile(`artifacts/pagesentinel-${version}.zip`, zip);
 const digest = createHash("sha256").update(zip).digest("hex");
-await writeFile("artifacts/SHA256SUMS", `${digest}  pagesentinel-0.1.0.zip\n`);
+await writeFile(
+  "artifacts/SHA256SUMS",
+  `${digest}  pagesentinel-${version}.zip\n`,
+);
 console.log(`Packaged ${zip.length} bytes, SHA-256 ${digest}`);

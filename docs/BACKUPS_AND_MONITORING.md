@@ -1,0 +1,17 @@
+# Backups and monitoring controls
+
+Settings exports an optional authenticated encrypted JSON envelope using native Web Crypto: AES-256-GCM with a fresh random 96-bit nonce, 128-bit authentication tag, 128-bit random salt and PBKDF2-HMAC-SHA-256 at 600,000 iterations. The envelope fixes the algorithms and KDF cost; imports reject altered parameters, malformed encodings and ciphertext before returning any data. A fixed format header is authenticated as additional data. There is no custom cipher, external cryptography service, persisted passphrase or stored encryption key. This implementation has regression coverage, not an independent cryptographic audit.
+
+New passphrases must have at least 12 characters and match their confirmation. Keep the passphrase separately; there is no recovery service. React temporarily holds input while the form is open and clears it after successful operations. JavaScript garbage collection means immediate erasure of all memory copies cannot be guaranteed. Normal IndexedDB and Chrome profile storage remain plaintext. Plain JSON export requires an explicit warning confirmation and is still available.
+
+Encrypted export/decrypted import is bounded at 64 MiB; the encrypted file input allows 90 MiB to accommodate base64 overhead. Corrupt or wrong-passphrase files do not fall back to plaintext. Import validates configurations and company profiles before one atomic database transaction. Profiles and monitors receive new IDs and start paused, without trusting old successful baselines or permissions. Old history remains archival in the backup; importing it into the live timeline is not implemented. Appearance settings remain the user's current preferences.
+
+Availability monitors compare the chosen complete stock message with the configured phrase, ignoring case and whitespace. A longer or negated message containing the phrase fails visibly instead of silently alerting. Use generic keyword mode for intentional substring matching.
+
+New-item monitors require a selected list and one stable public link per entry. Links are identities; order and label edits do not alert, while a new URL does. Duplicate or missing links, empty lists, private targets, ambiguous entry structure and oversized lists fail visibly. At most 1,000 entries are processed per check, within the existing 120,000-character limit. Query parameters remain meaningful: changing tracking parameters can appear as new entries. This is not a universal feed or identifier extractor.
+
+Bulk controls pause/resume, delete or change frequency for up to 200 selected monitors per action. Metadata changes and selected deletions are atomic. Resuming validates every selected origin before writing; frequency changes opt company documents out of the inherited frequency. These are per-action safety bounds rather than total monitor caps.
+
+Guided selector repair opens the saved source and asks the user to choose replacement content with the toolbar. A session-scoped repair ID is matched to Chrome's final tab URL and the current stored monitor. The replacement is shown in the existing form and requires a Save & verify action. No automatic target substitution occurs. If navigation ends at another URL, create a new monitor or explicitly edit the old target instead.
+
+Snoozing suppresses native alerts temporarily; changes still commit and increment the inbox. Clear snooze from monitor diagnostics. Settings lists actual website grants and provides removal controls without deleting baselines/history.

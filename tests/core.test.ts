@@ -280,7 +280,8 @@ describe("durable check state", () => {
       expect(next.hash).toBe(baseline.hash);
       expect(next.baseline).toBe("A");
       expect(next.failures).toBe(1);
-      expect(health(next).label).toBe("Needs attention");
+      expect(health(next).tone).toBe("error");
+      expect(health(next).detail).toBe(next.error);
     }
     deps.allowed = async () => false;
     const revoked = await check(baseline, defaultSettings, deps);

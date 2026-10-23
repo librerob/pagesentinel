@@ -7,7 +7,7 @@ import {
   webURL,
 } from "./core/validation";
 import { defaultSettings, type Settings } from "./core/model";
-import { importConfigs } from "./core/backup";
+import { importBundle } from "./core/backup";
 import { pageSelection } from "./core/page";
 import { companyConfig, discoverHTML, discoverPolicies } from "./core/privacy";
 import { fetchHTML } from "./core/network";
@@ -156,6 +156,7 @@ async function command(message: unknown) {
         "ignoreNumbers",
         "ignoreDates",
         "decimal",
+        "itemSelector",
       ].some((k) => existing[k as keyof typeof c] !== c[k as keyof typeof c]);
     const m =
       existing && !reset
@@ -195,14 +196,9 @@ async function command(message: unknown) {
       companies: await db.companies(),
     };
   if (msg.type === "import") {
-    const items = importConfigs(msg.data);
-    // Unknown group IDs from archival backups must never attach to live groups.
-    for (const item of items) {
-      item.companyId = undefined;
-      item.inheritInterval = undefined;
-    }
-    await db.addImported(items);
-    return items.length;
+    const bundle = importBundle(msg.data);
+    await db.addImported(bundle.monitors, bundle.companies);
+    return bundle.monitors.length;
   }
   if (msg.type === "clearAllHistory") {
     await db.clearHistory();
@@ -338,6 +334,60 @@ async function command(message: unknown) {
       cursor,
     );
   }
+  if (msg.type === "bulk") {
+    if (
+      !Array.isArray(msg.ids) ||
+      !msg.ids.length ||
+      msg.ids.length > 200 ||
+      !msg.ids.every((id) => typeof id === "string" && id.length <= 100)
+    )
+      throw new Error("Select between 1 and 200 monitors per action.");
+    const ids = [...new Set(msg.ids as string[])],
+      all = await db.monitorMetadata();
+    const items = ids.map((id) => {
+      const m = all.find((m) => m.id === id);
+      if (!m) throw new Error("A selected monitor no longer exists.");
+      return m;
+    });
+    if (msg.action === "delete") {
+      await db.removeMonitors(ids);
+      return true;
+    }
+    if (!["pause", "resume", "interval"].includes(String(msg.action)))
+      throw new Error("Invalid bulk action.");
+    if (msg.action === "resume")
+      for (const m of items)
+        if (
+          !(await chrome.permissions.contains({
+            origins: [originPattern(m.url)],
+          }))
+        )
+          throw new Error(
+            "Grant access to each selected website before resuming. No monitors were changed.",
+          );
+    const interval = Number(msg.interval);
+    if (
+      msg.action === "interval" &&
+      (!Number.isInteger(interval) || interval < 0 || interval > 43200)
+    )
+      throw new Error(
+        "Use manual checks or an interval from 1 minute to 30 days.",
+      );
+    await db.updateMany(
+      items.map((m) =>
+        msg.action === "interval"
+          ? { ...m, interval, inheritInterval: false, nextCheck: Date.now() }
+          : {
+              ...m,
+              paused: msg.action === "pause",
+              ...(msg.action === "resume"
+                ? { permissionRequired: false, nextCheck: Date.now() }
+                : {}),
+            },
+      ),
+    );
+    return true;
+  }
   if (msg.type === "pick") {
     if (!Number.isInteger(msg.tabId) || Number(msg.tabId) < 0)
       throw new Error("Select an ordinary website tab first.");
@@ -352,6 +402,13 @@ async function command(message: unknown) {
   const id = typeof msg.id === "string" ? msg.id : "";
   const metadata = (await db.monitorMetadata()).find((m) => m.id === id);
   if (!metadata) throw new Error("Monitor not found.");
+  if (msg.type === "repair") {
+    await chrome.storage.session.set({
+      repair: { id: metadata.id, url: metadata.url },
+    });
+    await chrome.tabs.create({ url: webURL(metadata.url).href });
+    return true;
+  }
   if (msg.type === "history") return db.snapshots(id);
   if (msg.type === "delete") {
     await db.removeMonitor(id);
@@ -441,14 +498,36 @@ chrome.runtime.onMessage.addListener((msg: unknown, sender, reply) => {
       )
         return;
       void chrome.storage.session
-        .set({
-          selection: pageSelection(sender.tab, value.selector, value.preview),
+        .get("repair")
+        .then(async (data) => {
+          const repair = data.repair as
+            { id?: unknown; url?: unknown } | undefined;
+          const selection = pageSelection(
+            sender.tab!,
+            value.selector as string,
+            value.preview as string,
+          );
+          const monitor =
+            repair && typeof repair.id === "string"
+              ? await db.monitor(repair.id)
+              : undefined;
+          const repairId =
+            monitor &&
+            monitor.url === selection.url &&
+            monitor.url === repair?.url
+              ? monitor.id
+              : undefined;
+          await chrome.storage.session.set({
+            selection: { ...selection, repairId },
+          });
+          await chrome.storage.session.remove("repair");
         })
         .then(() =>
           chrome.tabs.create({
             url: chrome.runtime.getURL("dashboard.html#new"),
           }),
-        );
+        )
+        .catch(() => undefined);
     } catch {
       /* Invalid page selection is ignored. */
     }

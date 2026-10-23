@@ -3,6 +3,7 @@ import { selectAll } from "css-select";
 import { removeElement, textContent } from "domutils";
 import type { AnyNode } from "domhandler";
 import { MAX_BYTES, MAX_TEXT, type Config } from "./model";
+import { extractItems } from "./items";
 export function normalize(
   text: string,
   c: Pick<Config, "ignoreNumbers" | "ignoreDates" | "ignoreText">,
@@ -132,6 +133,7 @@ export function extract(html: string, c: Config): string {
         ? "The selector matches multiple elements. Select a unique element again."
         : "Selected element is missing. The page may require JavaScript or its layout changed.",
     );
+  if (c.kind === "items") return extractItems(nodes[0], c);
   const result = normalize(
     (nodes.length ? nodes : [doc]).map(readable).join("\n\n"),
     c,

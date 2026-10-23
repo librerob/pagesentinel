@@ -2,6 +2,7 @@ import { StrictMode, useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   BRAND,
+  APP_VERSION,
   health,
   type MonitorMetadata as Monitor,
   type Settings,
@@ -13,6 +14,8 @@ import { MonitorForm, type Selection } from "./MonitorForm";
 import { History } from "./History";
 import { PrivacyWatch, ChangeTimeline } from "./PrivacyWatch";
 import { Onboarding, Overview } from "./Welcome";
+import { decryptBackup, encryptBackup } from "../core/encryption";
+import { BulkControls } from "./BulkControls";
 import "./theme.css";
 function App() {
   const [state, setState] = useState<State>(emptyState),
@@ -53,7 +56,16 @@ function App() {
       return;
     }
     void chrome.storage.session.get("selection").then((x) => {
-      setForm({ selection: x.selection as Selection | undefined });
+      const selection = x.selection as Selection | undefined;
+      // Load current metadata for a repair rather than trusting a page-supplied ID.
+      void api<State>("state").then((s) =>
+        setForm({
+          selection,
+          monitor: selection?.repairId
+            ? s.monitors.find((m) => m.id === selection.repairId)
+            : undefined,
+        }),
+      );
       void chrome.storage.session.remove("selection");
     });
   }, [route]);
@@ -130,7 +142,14 @@ function App() {
   ];
   return (
     <div className="app-shell">
-      <a className="skip-link" href="#main-content">
+      <a
+        className="skip-link"
+        href="#main-content"
+        onClick={(e) => {
+          e.preventDefault();
+          document.getElementById("main-content")?.focus();
+        }}
+      >
         Skip to content
       </a>
       <Onboarding start={() => setForm({})} />
@@ -192,7 +211,9 @@ function App() {
                     ? "About PageSentinel"
                     : "Your workspace"}
           </span>
-          <span className="version">v0.1.0 · working title</span>
+          <span className="version">
+            v{APP_VERSION} · preview · working title
+          </span>
         </header>
         <div className="main-content">
           {error && (
@@ -260,6 +281,20 @@ function App() {
                       : "Check now"}
                 </button>
               </div>
+              {selected.selector && (
+                <details className="maintenance">
+                  <summary>Repair the selected content</summary>
+                  <p>
+                    Open the website, then use the PageSentinel toolbar and
+                    choose Select an element. Review the replacement in the
+                    monitor form before saving. The old successful baseline
+                    remains until you confirm.
+                  </p>
+                  <button onClick={() => void action("repair", selected.id)}>
+                    Select content again
+                  </button>
+                </details>
+              )}
               <dl className="monitor-facts">
                 <div>
                   <dt>Last successful check</dt>
@@ -340,6 +375,23 @@ function App() {
                   </button>
                   <button
                     disabled={!!busy}
+                    onClick={() =>
+                      void action("snooze", selected.id, { minutes: 60 })
+                    }
+                  >
+                    Snooze notifications for 1 hour
+                  </button>
+                  {(selected.snoozeUntil ?? 0) > Date.now() && (
+                    <button
+                      onClick={() =>
+                        void action("snooze", selected.id, { minutes: 0 })
+                      }
+                    >
+                      End snooze · {when(selected.snoozeUntil ?? 0)}
+                    </button>
+                  )}
+                  <button
+                    disabled={!!busy}
                     className="danger"
                     onClick={() => {
                       if (
@@ -366,6 +418,8 @@ function App() {
               action={action}
               busy={!!busy}
               onError={setError}
+              onImported={refresh}
+              monitors={state.monitors}
             />
           ) : route === "about" ? (
             <About />
@@ -477,6 +531,13 @@ function App() {
                   />
                 </label>
               </div>
+              {!!list.length && (
+                <BulkControls
+                  monitors={list}
+                  refresh={refresh}
+                  onError={setError}
+                />
+              )}
               {list.length ? (
                 <div className="monitor-list">
                   <div className="list-header">
@@ -629,6 +690,8 @@ function SettingsView({
   action,
   busy,
   onError,
+  onImported,
+  monitors,
 }: {
   value: Settings;
   save: (value: Settings) => void;
@@ -639,43 +702,82 @@ function SettingsView({
   ) => Promise<void>;
   busy: boolean;
   onError: (message: string) => void;
+  onImported: () => void;
+  monitors: Monitor[];
 }) {
   const [notice, setNotice] = useState("");
+  const [encrypted, setEncrypted] = useState(true),
+    [passphrase, setPassphrase] = useState(""),
+    [confirmation, setConfirmation] = useState(""),
+    [backupBusy, setBackupBusy] = useState(false);
   const set = <K extends keyof Settings>(key: K, next: Settings[K]) =>
     save({ ...value, [key]: next });
   async function exportData() {
     try {
+      if (encrypted && passphrase !== confirmation)
+        throw new Error("The backup passphrases do not match.");
+      if (
+        !encrypted &&
+        !confirm(
+          "Export unencrypted URLs and saved page text? Anyone with this file can read them.",
+        )
+      )
+        return;
+      setBackupBusy(true);
       const data = await api("export"),
-        blob = new Blob([JSON.stringify(data, null, 2)], {
+        exported = encrypted ? await encryptBackup(data, passphrase) : data,
+        blob = new Blob([JSON.stringify(exported)], {
           type: "application/json",
         }),
         url = URL.createObjectURL(blob),
         a = document.createElement("a");
       a.href = url;
-      a.download = `pagesentinel-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `pagesentinel-backup-${new Date().toISOString().slice(0, 10)}${encrypted ? ".encrypted" : ""}.json`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setPassphrase("");
+      setConfirmation("");
+      setNotice(
+        encrypted
+          ? "Encrypted backup downloaded. Keep the passphrase separately."
+          : "Plaintext backup downloaded.",
+      );
     } catch (e) {
       onError(String(e));
+    } finally {
+      setBackupBusy(false);
     }
   }
   async function importData(file: File) {
     try {
-      if (file.size > 10 * 1024 * 1024)
-        throw new Error("Backup exceeds 10 MiB.");
-      const data: unknown = JSON.parse(await file.text());
+      if (file.size > 90 * 1024 * 1024)
+        throw new Error("Backup exceeds 90 MiB.");
+      setBackupBusy(true);
+      let data: unknown = JSON.parse(await file.text());
+      if (
+        data &&
+        typeof data === "object" &&
+        "format" in data &&
+        data.format === "pagesentinel-encrypted"
+      )
+        data = await decryptBackup(data, passphrase);
       if (
         !confirm(
           "Import monitor configurations as paused copies? You will grant each website access before resuming. Exported history remains in your backup and is not imported as a baseline.",
         )
       )
         return;
-      await action("import", undefined, { data });
+      await api("import", { data });
+      onImported();
+      setPassphrase("");
+      setConfirmation("");
       setNotice(
         "Import processed. Imported monitors are paused until you grant access.",
       );
     } catch (e) {
       onError(String(e));
+    } finally {
+      setBackupBusy(false);
     }
   }
   return (
@@ -761,6 +863,20 @@ function SettingsView({
           </p>
         </section>
         <section>
+          <h2>Privacy & website access</h2>
+          <p>
+            Checks request only your saved public URLs, without sign-in cookies
+            or referrers. No monitoring data goes to a developer service. Local
+            baselines and history are readable to anyone with access to this
+            Chrome profile.
+          </p>
+          <PermissionSettings
+            monitors={monitors}
+            refresh={onImported}
+            onError={onError}
+          />
+        </section>
+        <section>
           <h2>Your data</h2>
           <p>
             Export configurations, settings, and recorded history to a local
@@ -768,11 +884,54 @@ function SettingsView({
             copies; history stays in the backup for archival use.
           </p>
           <div className="actions-wrap">
-            <button onClick={() => void exportData()}>Export backup</button>
+            <label className="check-label">
+              <input
+                type="checkbox"
+                checked={encrypted}
+                disabled={backupBusy}
+                onChange={(e) => setEncrypted(e.target.checked)}
+              />
+              Encrypt backup export
+            </label>
+          </div>
+          <label>
+            Backup passphrase
+            <input
+              aria-label="Backup passphrase"
+              type="password"
+              autoComplete="new-password"
+              maxLength={1024}
+              value={passphrase}
+              disabled={backupBusy}
+              onChange={(e) => setPassphrase(e.target.value)}
+            />
+            <small>
+              For encrypted export or import. At least 12 characters for a new
+              export. Not saved; lost passphrases cannot be recovered.
+            </small>
+          </label>
+          {encrypted && (
+            <label>
+              Confirm passphrase for export
+              <input
+                type="password"
+                autoComplete="new-password"
+                maxLength={1024}
+                value={confirmation}
+                disabled={backupBusy}
+                onChange={(e) => setConfirmation(e.target.value)}
+              />
+            </label>
+          )}
+          <div className="actions-wrap">
+            <button disabled={backupBusy} onClick={() => void exportData()}>
+              {backupBusy ? "Processing backup…" : "Export backup"}
+            </button>
             <label className="button file-button">
               Import configurations
               <input
                 type="file"
+                disabled={backupBusy}
                 accept=".json,application/json"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
@@ -784,8 +943,10 @@ function SettingsView({
           </div>
           {notice && <p role="status">{notice}</p>}
           <p className="note">
-            Backups contain page text and URLs in plain text. Store them
-            somewhere private.
+            Encrypted exports protect the file with your passphrase. Unencrypted
+            JSON exports and ordinary local extension storage contain readable
+            URLs and text. Imports create paused configuration copies; archival
+            history stays in the file.
           </p>
           <div className="actions-wrap">
             <button
@@ -821,6 +982,55 @@ function SettingsView({
     </>
   );
 }
+function PermissionSettings({
+  monitors,
+  refresh,
+  onError,
+}: {
+  monitors: Monitor[];
+  refresh: () => void;
+  onError: (text: string) => void;
+}) {
+  const [origins, setOrigins] = useState<string[]>([]);
+  useEffect(() => {
+    void chrome.permissions
+      .getAll()
+      .then((p) => setOrigins(p.origins ?? []))
+      .catch((e) => onError(String(e)));
+  }, [onError]);
+  return (
+    <>
+      <p className="note">
+        {new Set(monitors.map((m) => new URL(m.url).origin)).size} monitored
+        website origins. Chrome grants cover paths and may cover ports. Removing
+        access pauses affected monitors; their history remains.
+      </p>
+      <ul className="permission-list">
+        {origins.map((origin) => (
+          <li key={origin}>
+            <span>{origin}</span>
+            <button
+              onClick={() =>
+                void chrome.permissions
+                  .remove({ origins: [origin] })
+                  .then((removed) => {
+                    if (removed) {
+                      setOrigins((old) => old.filter((x) => x !== origin));
+                      refresh();
+                    }
+                  })
+                  .catch((e) => onError(String(e)))
+              }
+            >
+              Remove access to {origin}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {!origins.length && <p className="note">No persistent website grants.</p>}
+    </>
+  );
+}
 function About() {
   return (
     <div className="about-content">
@@ -843,9 +1053,10 @@ function About() {
       <h2>What this release can watch</h2>
       <p>
         Public HTML pages and uniquely selected elements, including policy
-        documents, prices, and availability phrases. JavaScript-only content,
-        signed-in pages, screenshots, PDFs, and company-wide Privacy Watch
-        groups are not supported yet.
+        documents, prices, availability states and new entries in stable-link
+        lists. Privacy Watch groups company documents and shows a shared
+        evidence timeline. JavaScript-only content, signed-in pages, screenshots
+        and PDFs are not supported.
       </p>
       <h2>A working title</h2>
       <p>

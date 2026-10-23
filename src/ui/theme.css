@@ -107,6 +107,31 @@
 .timeline-filters {
   margin-bottom: 24px;
 }
+.bulk-controls {
+  margin: 20px 0;
+}
+.bulk-selection {
+  max-height: 240px;
+  overflow: auto;
+}
+.permission-list {
+  padding: 0;
+  list-style: none;
+}
+.permission-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  overflow-wrap: anywhere;
+}
+.bulk-controls fieldset {
+  margin: 16px 0;
+  border: 1px solid var(--outline-variant);
+  border-radius: 12px;
+}
 .start-actions {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));

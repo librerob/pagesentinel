@@ -66,7 +66,7 @@ export function config(input: unknown): Config {
   c.url = webURL(c.url).href;
   if (!c.title) c.title = new URL(c.url).hostname;
   if (
-    !["text", "policy", "keyword", "price", "availability"].includes(
+    !["text", "policy", "keyword", "price", "availability", "items"].includes(
       String(x.kind),
     )
   )
@@ -102,6 +102,15 @@ export function config(input: unknown): Config {
   if (!allowed.includes(String(x.condition)))
     throw new Error("Choose a valid alert condition.");
   c.condition = x.condition as Config["condition"];
+  if (c.kind === "items" && !c.selector)
+    throw new Error(
+      "Select the list section to avoid tracking unrelated navigation links.",
+    );
+  if (x.itemSelector !== undefined) {
+    if (typeof x.itemSelector !== "string" || x.itemSelector.length > 1000)
+      throw new Error("Invalid list item selector.");
+    c.itemSelector = x.itemSelector.trim();
+  }
   if (["keyword", "availability"].includes(c.kind) && !c.phrase)
     throw new Error("Enter a word or phrase to watch.");
   if (c.kind === "price" && !c.selector)
