@@ -259,6 +259,7 @@ async function command(message: unknown) {
       ...m,
       hash: "",
       baseline: "",
+      referenceText: undefined,
       lastPrice: undefined,
       lowPrice: undefined,
       currency: undefined,

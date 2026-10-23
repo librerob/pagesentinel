@@ -97,14 +97,15 @@ export function evaluate(
             : before !== after,
     };
   }
-  const parts = wordDiff(m.baseline, next);
+  const reference = m.referenceText ?? m.baseline;
+  const parts = wordDiff(reference, next);
   const changed = parts
     .filter((p) => p.added || p.removed)
     .reduce((n, p) => n + p.value.length, 0);
   return {
     alert:
       m.baseline !== next &&
-      (100 * changed) / Math.max(m.baseline.length, next.length, 1) >=
+      (100 * changed) / Math.max(reference.length, next.length, 1) >=
         m.threshold,
   };
 }

@@ -132,6 +132,12 @@ export async function check(
       ...m,
       hash,
       baseline: text,
+      referenceText:
+        m.kind === "text" || m.kind === "policy"
+          ? !m.hash || (changed && outcome.alert)
+            ? text
+            : (m.referenceText ?? m.baseline)
+          : undefined,
       lastSuccess: Date.now(),
       lastChange: changed ? Date.now() : m.lastChange,
       nextCheck: nextTime(m.interval),

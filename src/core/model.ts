@@ -45,6 +45,7 @@ export interface Monitor extends Config {
   lease: number;
   hash: string;
   baseline: string;
+  referenceText?: string;
   lastPrice?: number;
   lowPrice?: number;
   currency?: string;

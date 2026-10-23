@@ -1,5 +1,7 @@
 # Architecture
 
+Text/policy alert thresholds use a separate reference text from the latest alert, or the initial successful baseline. Each successful version still advances the ordinary baseline and stores a previous-to-current snapshot. Sub-threshold edits leave the reference untouched; alerts and explicit baseline resets replace it. Failed checks retain both texts. Legacy monitors without a reference begin from their last successful baseline unless retained history supplies a newer alert reference during migration. The percentage remains the existing added-plus-removed character volume divided by the longer comparison text.
+
 `src/core/` contains validated models, inert extraction, bounded network reads, comparison/rule logic, IndexedDB transactions, backup validation and the check state machine. `src/worker.ts` registers Chrome event listeners synchronously and serializes operations. `src/picker.ts` is an isolated-world temporary content script. React interfaces live in `src/ui/`.
 
 The scheduler uses one repeating one-minute alarm. It reconciles permissions, interrupted leases, and missing alarms on installation, browser startup and worker initialization. Browser startup spreads substantially overdue monitors by 15 seconds. Each tick handles the three oldest due monitors sequentially. Saved per-monitor next-check times use a 0–15-second jitter. Failure backoff grows exponentially to six hours while respecting longer configured intervals. Manual-only monitors do not schedule retries.

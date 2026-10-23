@@ -32,6 +32,7 @@ Allow access to the selected website when Chrome asks. The first background chec
 - Price decreases, increases, new lows, and threshold crossings. Ambiguous numeric formats fail visibly.
 - Case-insensitive phrase appearance, disappearance, or count changes, including availability phrases.
 - Optional exclusions, exact ignored phrases, ISO timestamp suppression, numeric suppression, and text-change thresholds.
+- Text and policy thresholds accumulate edits against the last alert (or initial baseline); small successive edits no longer disappear through baseline drift.
 - Material Design 3 semantic themes: System, Light, Dark, and true-black AMOLED; six accent choices. Roboto is bundled locally.
 - Bounded local history, JSON export including history, and validated configuration import as paused copies.
 
