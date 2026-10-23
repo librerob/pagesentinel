@@ -18,6 +18,11 @@ export function price(
       .filter(Boolean) ?? [];
   if (tokens.length !== 1 || currencies.length !== 1)
     throw new Error("Price is ambiguous. Select one price with one currency.");
+  if (
+    /[\s\u00a0]/.test(tokens[0]) &&
+    !/^\d{1,3}(?:[ \u00a0]\d{3})+(?:[.,]\d{1,2})?$/.test(tokens[0])
+  )
+    throw new Error("Unrecognized price grouping. Select a single price.");
   let value = tokens[0].replace(/[\s\u00a0]/g, "");
   let separator = decimal;
   if (separator === "auto") {

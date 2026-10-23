@@ -447,9 +447,19 @@ try {
     assert(
       (await ui.locator("ins").allTextContents()).join("").includes("may"),
     );
-    assert(
-      (await ui.locator("del").allTextContents()).join("").includes("do not"),
-    );
+    const recorded = (await api("history", { id: policy.id }))[0];
+    const rendered = await ui.locator(".diff-content").evaluate((el) => ({
+      before: [...el.childNodes]
+        .filter((n) => n.nodeName !== "INS")
+        .map((n) => n.textContent)
+        .join(""),
+      after: [...el.childNodes]
+        .filter((n) => n.nodeName !== "DEL")
+        .map((n) => n.textContent)
+        .join(""),
+    }));
+    assert.equal(rendered.before, recorded.before);
+    assert.equal(rendered.after, recorded.after);
     await ui.screenshot({
       path: path.join(screenshots, `policy-${theme}.png`),
       fullPage: true,

@@ -1,6 +1,6 @@
 # Validation
 
-Local type checking, linting, Vitest, production build and package validation are required. The initial unit suite contains 50 tests covering URL/config validation, inert extraction, ambiguous prices, threshold/phrase transitions, exact diffs and policy evidence, baseline preservation, retries, quota errors, notification failures, credential-free bounded networking, IndexedDB retention and transaction behavior.
+Local type checking, linting, Vitest, production build and package validation are required. The unit suite covers URL/config validation, inert extraction, ambiguous prices, threshold/phrase transitions, exact diffs and policy evidence, baseline preservation, retries, quota errors, notification failures, credential-free bounded networking, IndexedDB retention and transaction behavior. It also verifies that picked text must be reproduced in public HTML and that manual checks preserve a paused schedule.
 
 `tests/browser.mjs` loads the actual built MV3 extension into Chromium with controlled synthetic pages. A temporary test manifest pre-grants one fixture origin. Production code and URL validation are unchanged. The suite exercises worker/popup/dashboard startup, monitor CRUD, scheduling via real Chrome alarm events, baseline/change persistence, notifications API records, missing selections, HTTP errors, redirects, response bounds, exports/imports, selection/cleanup, themes, responsive layout, and full browser restart recovery.
 

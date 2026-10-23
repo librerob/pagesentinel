@@ -134,10 +134,16 @@ describe("conservative price rules", () => {
     ["€ 1 299,99", 1299.99],
     ["¥299", 299],
   ])("parses %s", (text, value) => expect(price(text).value).toBe(value));
-  it.each(["299", "$100 $200", "€299 £199", "$1,299", "$12,34.50", "$1.2.3"])(
-    "refuses ambiguous %s",
-    (text) => expect(() => price(text)).toThrow(),
-  );
+  it.each([
+    "299",
+    "$100 $200",
+    "€299 £199",
+    "$1,299",
+    "$12,34.50",
+    "$1.2.3",
+    "$1 23.99",
+    "$99 9",
+  ])("refuses ambiguous %s", (text) => expect(() => price(text)).toThrow());
   it("accepts explicitly confirmed thousands separators", () =>
     expect(price("$1,299", ".").value).toBe(1299));
   it("crosses target once and reports currency changes", () => {
