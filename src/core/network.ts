@@ -65,7 +65,7 @@ export async function fetchHTML(url: string): Promise<string> {
       );
     if (e instanceof TypeError)
       throw new Error(
-        "Could not fetch the public page. Network errors and redirects are blocked; open the final page URL and try again.",
+        'Could not fetch the public page. The website may be unavailable, or this URL may redirect. Open it in your browser, then paste the final address or use "Monitor this page" / "Select an element" on that final page. Redirects stay blocked to avoid contacting unapproved hosts.',
       );
     throw e;
   } finally {

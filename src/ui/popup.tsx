@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { BRAND, health } from "../core/model";
-import { webURL, originPattern } from "../core/validation";
+import { originPattern } from "../core/validation";
+import { pageURL } from "../core/page";
 import { api, appearance, emptyState, type State } from "./api";
 import { Icon, Logo } from "./icons";
 import "./theme.css";
@@ -23,7 +24,7 @@ function Popup() {
   }, []);
   let url = "";
   try {
-    url = webURL(tab?.url).href;
+    url = pageURL(tab);
   } catch {
     /* Restricted tabs have no monitoring action. */
   }

@@ -8,6 +8,7 @@ import {
 } from "./core/validation";
 import { defaultSettings, type Settings } from "./core/model";
 import { importConfigs } from "./core/backup";
+import { pageSelection } from "./core/page";
 let queue = Promise.resolve<unknown>(undefined);
 function serial<T>(task: () => Promise<T>): Promise<T> {
   const result = queue.then(task);
@@ -283,7 +284,6 @@ chrome.runtime.onMessage.addListener((msg: unknown, sender, reply) => {
       return;
     const value = msg as Record<string, unknown>;
     try {
-      const url = webURL(sender.tab.url).href;
       if (
         typeof value.selector !== "string" ||
         value.selector.length > 1000 ||
@@ -293,12 +293,7 @@ chrome.runtime.onMessage.addListener((msg: unknown, sender, reply) => {
         return;
       void chrome.storage.session
         .set({
-          selection: {
-            url,
-            title: (sender.tab.title ?? "").slice(0, 200),
-            selector: value.selector,
-            preview: value.preview,
-          },
+          selection: pageSelection(sender.tab, value.selector, value.preview),
         })
         .then(() =>
           chrome.tabs.create({

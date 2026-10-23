@@ -50,6 +50,8 @@ Monitored websites receive ordinary requests from your network address. No monit
 
 ## Boundaries
 
+Redirects remain rejected by design to prevent unapproved-host contact, including private addresses. Open a redirecting URL in your browser, then paste its final address or use **Monitor this page** / **Select an element** from the final page. Both setup flows save Chrome's current final tab URL.
+
 Dynamic JavaScript rendering, authenticated monitoring, screenshots, PDFs, automation macros, selector recovery, company groups, unified Privacy Watch timelines, and encrypted backups are deferred. Selection succeeds only if the corresponding unique element exists in public HTML. CSS-hidden content cannot always be recognized without rendering; choose the specific section when needed. Keyword highlights identify potentially relevant passages, not legal conclusions. Reordered paragraphs are presented as removals/additions.
 
 Import restores configurations as paused copies and requires origin access before resuming. Exported historical text stays in the backup for archival use; it is not imported as a trusted live baseline. Labels and arbitrary regular expressions are not implemented.

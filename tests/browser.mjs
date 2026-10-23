@@ -33,6 +33,11 @@ const updatedPolicy =
 const server = createServer((req, res) => {
   requests++;
   cookies.push({ url: req.url, cookie: req.headers.cookie ?? "" });
+  if (req.url === "/setup-redirect") {
+    res.writeHead(302, { location: "/product" });
+    res.end();
+    return;
+  }
   if (req.url === "/redirect") {
     res.writeHead(302, { location: "http://elsewhere.example.com/private" });
     res.end();
@@ -318,7 +323,8 @@ try {
     "Import restores validated new paused copies without trusting old baselines",
   );
   const web = await context.newPage();
-  await web.goto(`${base}/product`);
+  await web.goto(`${base}/setup-redirect`);
+  assert.equal(web.url(), `${base}/product`);
   await context.addCookies([
     {
       name: "signed_in",
@@ -372,6 +378,10 @@ try {
     (x) => !!x,
   );
   await selectedPage.getByRole("dialog").waitFor();
+  assert.equal(
+    await selectedPage.getByLabel("Website URL", { exact: true }).inputValue(),
+    `${base}/product`,
+  );
   assert.equal(
     await selectedPage
       .getByLabel("CSS selector", { exact: false })

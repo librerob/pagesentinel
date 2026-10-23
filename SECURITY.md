@@ -14,6 +14,8 @@ Page access denial, empty extraction, missing/non-unique selection, HTTP failure
 
 ## Persistence
 
+Redirect rejection happens before a redirect is followed. A post-fetch origin check would be too late to prevent unapproved-host contact, including private addresses. For redirecting pages, users navigate in their own browser and start monitoring from the final page. Popup and picker setup use Chrome-supplied final tab URLs, validate them with `webURL`, and never trust a page-supplied destination.
+
 One serialized worker queue protects commands and checks. A persisted 45-second lease records in-flight work. The scheduler recovers expired leases and recreates a missing alarm on worker startup. The event and successful baseline commit in one IndexedDB transaction. A failed commit retains the previous baseline. A notification is requested after the transaction commits, preventing duplicate alerts for an already saved version. Worker termination between commit and notification may lose a notification; the unread event remains.
 
 The extension maintains a 50 MiB logical UTF-8 data budget. Browser storage accounting and available disk space can differ. IndexedDB quota errors are surfaced; they are not reported as unchanged results. A storage-open failure can prevent detailed health records; the toolbar badge and UI then report an error.
