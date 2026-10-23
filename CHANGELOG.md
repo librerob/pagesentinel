@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Canonicalize trailing DNS dots before validation and origin grants; reject additional local suffixes and malformed DNS labels, with international-domain and alternate-IP regression tests.
+
 - Keep redirects blocked before destination contact; explain final-page recovery and verify popup/picker setup uses the final tab URL.
 - Scope password-field detection to the selected subtree without weakening whole-page or challenge detection.
 - Compare text thresholds with the last-alert reference while retaining each previous-to-current history snapshot.

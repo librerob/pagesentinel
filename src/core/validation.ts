@@ -2,10 +2,17 @@ import { defaults, type Config, type Settings, defaultSettings } from "./model";
 export function webURL(value: unknown): URL {
   if (typeof value !== "string" || value.length > 4096)
     throw new Error("Enter a valid public website URL.");
-  const u = new URL(value);
+  let u: URL;
+  try {
+    u = new URL(value);
+  } catch {
+    throw new Error("Enter a valid public website URL.");
+  }
   if (!["https:", "http:"].includes(u.protocol) || u.username || u.password)
     throw new Error("Use an HTTP or HTTPS URL without embedded credentials.");
-  const host = u.hostname.toLowerCase();
+  // A final DNS dot denotes the same host. Canonicalize before suffix checks
+  // and before deriving permission patterns, so local.example.local. cannot pass.
+  const host = u.hostname.toLowerCase().replace(/\.$/, "");
   // IP literals and single-label/local domains are deliberately unsupported. DNS
   // rebinding cannot be prevented by extension JavaScript; see SECURITY.md.
   if (
@@ -13,12 +20,19 @@ export function webURL(value: unknown): URL {
     host.includes(":") ||
     host.includes("[") ||
     /^[\d.]+$/.test(host) ||
-    /\.(localhost|local|internal|lan|home|test|invalid)$/.test(host) ||
-    host.endsWith(".arpa")
+    /\.(localhost|local|localdomain|internal|intranet|private|corp|lan|home|test|invalid|onion)$/.test(
+      host,
+    ) ||
+    host.endsWith(".arpa") ||
+    host.length > 253 ||
+    !host
+      .split(".")
+      .every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label))
   )
     throw new Error(
       "Use a public domain. Local addresses and IP literals are not supported.",
     );
+  u.hostname = host;
   u.hash = "";
   return u;
 }
