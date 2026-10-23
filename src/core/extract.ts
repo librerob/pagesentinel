@@ -51,6 +51,14 @@ function readable(node: AnyNode): string {
   const value = node.children.map(readable).join("");
   return "name" in node && block.has(node.name) ? `\n\n${value}\n\n` : value;
 }
+function passwordInput(node: AnyNode): boolean {
+  return (
+    "name" in node &&
+    "attribs" in node &&
+    node.name === "input" &&
+    node.attribs.type?.toLowerCase() === "password"
+  );
+}
 export function extract(html: string, c: Config): string {
   if (new TextEncoder().encode(html).byteLength > MAX_BYTES)
     throw new Error("Page exceeds the 2 MiB processing limit.");
@@ -60,10 +68,34 @@ export function extract(html: string, c: Config): string {
     /^(just a moment|access denied|sign in|log in|attention required|verify you are human)/i.test(
       title.trim(),
     ) ||
-    selectAll('input[type="password"], #challenge-form, .g-recaptcha', doc)
-      .length
+    selectAll("#challenge-form, .g-recaptcha", doc).length ||
+    (!c.selector && selectAll('input[type="password"]', doc).length)
   )
     throw new Error("The page requires sign-in or a human verification check.");
+  if (c.selector) {
+    // Check the original subtree before hidden nodes or user exclusions are removed.
+    // The selected node itself may be a password input; selectAll omits its root.
+    try {
+      const selected = selectAll(c.selector, doc);
+      if (
+        selected.some(
+          (node) =>
+            passwordInput(node) ||
+            selectAll('input[type="password"]', node).length > 0,
+        )
+      )
+        throw new Error("The selected section requires sign-in.");
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === "The selected section requires sign-in."
+      )
+        throw error;
+      throw new Error(
+        "The selected CSS selector is invalid. Select the element again.",
+      );
+    }
+  }
   for (const node of selectAll(
     'script,style,noscript,template,svg,canvas,iframe,object,embed,head,[hidden],[aria-hidden="true"]',
     doc,

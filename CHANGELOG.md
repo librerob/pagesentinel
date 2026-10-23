@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Keep redirects blocked before destination contact; explain final-page recovery and verify popup/picker setup uses the final tab URL.
+- Scope password-field detection to the selected subtree without weakening whole-page or challenge detection.
 
 ## 0.1.0 — 2026-10-23
 

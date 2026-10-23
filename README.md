@@ -23,6 +23,7 @@ Allow access to the selected website when Chrome asks. The first background chec
 ## What works in v0.1.0
 
 - Full-page public HTML text and a uniquely selected element.
+- Selected sections can be monitored beside unrelated login modals; sign-in titles, challenges, and password fields inside the selection still fail visibly.
 - One-action full-page creation from the toolbar, with origin-specific permission.
 - Temporary visual picker with hover highlight, parent selection, preview, and Escape to cancel.
 - Persisted schedules using Chrome alarms; manual checks, pause/resume, retry backoff, interrupted-check recovery, and overdue health.
