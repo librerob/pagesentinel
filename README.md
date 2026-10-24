@@ -12,9 +12,9 @@ Screenshots show the actual built extension with controlled synthetic product an
 
 ## Install
 
-The published release is still v0.1.0. The v0.2.0 preview described below is developed in reviewable pull requests; successful CI artifacts provide its installable ZIP. Build a source checkout with the commands below. Update the same installed extension/profile to preserve its storage; another extension ID creates separate storage. Back up before upgrading.
+The [v0.2.0 preview release](https://github.com/librerob/pagesentinel/releases/tag/v0.2.0) includes the installable ZIP and SHA256SUMS. All five upgrade pull requests are merged into main. Build a source checkout with the commands below. Update the same installed extension/profile to preserve its storage; another extension ID creates separate storage. Back up before upgrading.
 
-1. Download `pagesentinel-0.1.0.zip` from [Releases](https://github.com/librerob/pagesentinel/releases).
+1. Download `pagesentinel-0.2.0.zip` from the [v0.2.0 release](https://github.com/librerob/pagesentinel/releases/tag/v0.2.0) and verify it against SHA256SUMS.
 2. Extract the ZIP into a folder you intend to keep.
 3. In Chrome 120 or newer, open `chrome://extensions` and enable **Developer mode**.
 4. Choose **Load unpacked** and select the extracted folder containing `manifest.json`.
