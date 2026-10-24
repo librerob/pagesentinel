@@ -1,6 +1,6 @@
 # v0.2.0 preview preparation
 
-The upgrade is proposed in stacked review branches. No pull request is merged automatically and the existing v0.1.0 release/tag is unchanged. CI packages the branch under test; an artifact is not a Chrome Web Store approval or a production-readiness certificate.
+All five upgrade pull requests were merged into main at the owner's request. The [v0.2.0 preview](https://github.com/librerob/pagesentinel/releases/tag/v0.2.0) was published from commit `209a5d4df30f2129694754430878c08ef7881753` after the complete [release workflow](https://github.com/librerob/pagesentinel/actions/runs/40042888171) passed, including Chromium checks. The existing v0.1.0 release/tag remains unchanged. No Chrome Web Store submission was made; preview publication does not establish production readiness.
 
 ## Installable package
 
